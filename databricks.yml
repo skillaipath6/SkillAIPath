@@ -2,26 +2,16 @@ bundle:
   name: skillai-platform-workflows
   git:
     origin_url: https://github.com/SkillAIPath11/SkillAIPath
-
-# Sync configuration - deploys actual source files to workspace
 sync:
   include:
-    - "0_Core_Analytics/**"
-    - "1_Canvas/**"
-    - "2_Data_Production/**"
-    - "3_AI_Platform/**"
-    - "4_Business_Intelligence/**"
-    - "5_Growth_Accelerator/**"
+  - 0_Core_Analytics/**
+  - 1_Canvas/**
+  - 2_Data_Production/**
   exclude:
-    - ".git/**"
-    - ".github/**"
-    - "*.md"
-    - ".gitignore"
-
-# Note: workspace.host is intentionally NOT set here
-# It is provided dynamically via DATABRICKS_HOST environment variable
-# This allows multi-account deployments to different workspaces
-
+  - .git/**
+  - .github/**
+  - '*.md'
+  - .gitignore
 variables:
   warehouse_id:
     description: SQL Warehouse ID for dashboards
@@ -47,221 +37,8 @@ targets:
     variables:
       environment: main
       catalog: sap_main
-
 resources:
-  # Catalog, schema, and pipeline creation all handled by 01_Full_Load_Pipeline job
-  # Bundle only manages jobs and dashboards for infrastructure-as-code
-  
   jobs:
-    00_master_start_skillai:
-      name: 00_Master_Start_SkillAI ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      queue:
-        enabled: true
-      tasks:
-        - task_key: 01_Full_Load_Pipeline
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/2_Orchestration/Data_Platform/14_StartDBT_Full
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 02_Bronze_Stream_Generator
-          depends_on:
-            - task_key: 01_Full_Load_Pipeline
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/00_bronze_to_stream_generator
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 03_DLT_Setup_And_Run
-          depends_on:
-            - task_key: 01_Full_Load_Pipeline
-            - task_key: 02_Bronze_Stream_Generator
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/11_setup_silver_dlt_pipeline
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 04_Lakebase_Setup
-          depends_on:
-            - task_key: 01_Full_Load_Pipeline
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/06_Lakebase_LTAP/01_oltp_database_setup
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 06_LTAP_Sync
-          depends_on:
-            - task_key: 01_Full_Load_Pipeline
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/06_Lakebase_LTAP/03_oltp_to_olap_sync
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 07_Retail_Ops_DB_Setup
-          depends_on:
-            - task_key: 01_Full_Load_Pipeline
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/06_Lakebase_LTAP/02_retail_ops_database_setup
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 08_Knowledge_Retrieval
-          depends_on:
-            - task_key: 01_Full_Load_Pipeline
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/2_Rag_Pipeline/customer_360
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 09_Ecommerce_Intelligence
-          depends_on:
-            - task_key: 08_Knowledge_Retrieval
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/2_Rag_Pipeline/ecommerce_intelligence
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 10_Customer_360
-          depends_on:
-            - task_key: 09_Ecommerce_Intelligence
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/2_Rag_Pipeline/customer_360
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 11_Auto_Documentation
-          depends_on:
-            - task_key: 10_Customer_360
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/3_AI_Agents/Knowledge_Hub/Auto_Documentation
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 12_Chat_Extractor
-          depends_on:
-            - task_key: 08_Knowledge_Retrieval
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/3_AI_Agents/Knowledge_Hub/Training_Data_Extraction/log_collector/1_REAL_Chat_Extractor
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 13_Drive_Extractor
-          depends_on:
-            - task_key: 08_Knowledge_Retrieval
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/3_AI_Agents/Knowledge_Hub/Training_Data_Extraction/log_collector/2_Google_Drive_Universal_Extractor
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 14_Churn_Prediction
-          depends_on:
-            - task_key: 12_Chat_Extractor
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/01_Churn_Prediction_Training
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 15_Product_Recommendation
-          depends_on:
-            - task_key: 12_Chat_Extractor
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/02_Product_Recommendation_Training
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 16_Demand_Forecasting
-          depends_on:
-            - task_key: 12_Chat_Extractor
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/03_Demand_Forecasting_Training
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 17_Next_Purchase_Prediction
-          depends_on:
-            - task_key: 12_Chat_Extractor
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/04_Next_Purchase_Prediction_Training
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-        - task_key: 18_Deploy_BizApps
-          depends_on:
-            - task_key: 16_Demand_Forecasting
-            - task_key: 15_Product_Recommendation
-            - task_key: 17_Next_Purchase_Prediction
-            - task_key: 07_Retail_Ops_DB_Setup
-            - task_key: 14_Churn_Prediction
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/4_Business_Intelligence/3_Live_Apps/04_deploy_apps_job
-            source: WORKSPACE
-            base_parameters:
-              environment: ${var.environment}
-          timeout_seconds: 0
-          email_notifications: {}
-      tags:
-        Full-Pipeline: ''
-        Master: ''
-        Optimized: ''
-        Orchestration: ''
-        Production: ''
-      format: MULTI_TASK
-    01_ondemand_devops:
-      name: 01_OnDemand_DevOps ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: GitHub_Auto_Setup
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/0_DevOps/Production/GitHub_Auto_Setup
-            source: WORKSPACE
-          timeout_seconds: 0
-          email_notifications: {}
-      tags:
-        OnDemand: 'true'
-        DevOps: 'true'
-        CI/CD: 'true'
-        GitHub: 'true'
-        Setup: 'true'
-      format: MULTI_TASK
     02_ondemand_edufin_core_analytics:
       name: 02_OnDemand_EduFin_Core_Analytics ${var.environment}
       email_notifications: {}
@@ -269,39 +46,39 @@ resources:
       timeout_seconds: 0
       max_concurrent_runs: 3
       tasks:
+      - task_key: EduFin_Data_Setup
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/0_Data_Setup
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: EduFin_Portfolio_Health
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/1_Portfolio Health
+          source: WORKSPACE
+        depends_on:
         - task_key: EduFin_Data_Setup
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/0_Data_Setup
-            source: WORKSPACE
-          email_notifications: {}
-        - task_key: EduFin_Portfolio_Health
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/1_Portfolio Health
-            source: WORKSPACE
-          depends_on:
-            - task_key: EduFin_Data_Setup
-          email_notifications: {}
-        - task_key: EduFin_Customer_Risk
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/2_Customer Risk
-            source: WORKSPACE
-          depends_on:
-            - task_key: EduFin_Data_Setup
-          email_notifications: {}
-        - task_key: EduFin_Time_Analysis
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/3_Time Analysis
-            source: WORKSPACE
-          depends_on:
-            - task_key: EduFin_Data_Setup
-          email_notifications: {}
-        - task_key: EduFin_Cost_Tracking
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/4_Cost_Tracking
-            source: WORKSPACE
-          depends_on:
-            - task_key: EduFin_Data_Setup
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: EduFin_Customer_Risk
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/2_Customer Risk
+          source: WORKSPACE
+        depends_on:
+        - task_key: EduFin_Data_Setup
+        email_notifications: {}
+      - task_key: EduFin_Time_Analysis
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/3_Time Analysis
+          source: WORKSPACE
+        depends_on:
+        - task_key: EduFin_Data_Setup
+        email_notifications: {}
+      - task_key: EduFin_Cost_Tracking
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/0_Core_Analytics/02_EduFin/4_Cost_Tracking
+          source: WORKSPACE
+        depends_on:
+        - task_key: EduFin_Data_Setup
+        email_notifications: {}
       tags:
         Analytics: ''
         Education: ''
@@ -315,124 +92,124 @@ resources:
       timeout_seconds: 0
       max_concurrent_runs: 3
       tasks:
+      - task_key: dim_date
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/01_dim_date
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_product_category
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/02_dim_product_category
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_warehouse
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/03_dim_warehouse_nb
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_retailer
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/04_dim_retailer
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_agent
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/05_dim_agent
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_payment_mode
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/06_dim_payment_mode
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_product
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/07_dim_product_nb
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_wholesaler
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/13_dim_wholesaler
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: dim_customer
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/09_dim_customer_scd1_nb
+          source: WORKSPACE
+        email_notifications: {}
+      - task_key: fact_sales
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/02_Facts/01_fact_sales
+          source: WORKSPACE
+        depends_on:
         - task_key: dim_date
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/01_dim_date
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_product_category
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/02_dim_product_category
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_warehouse
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/03_dim_warehouse_nb
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_retailer
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/04_dim_retailer
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_agent
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/05_dim_agent
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_payment_mode
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/06_dim_payment_mode
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_product
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/07_dim_product_nb
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_wholesaler
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/13_dim_wholesaler
-            source: WORKSPACE
-          email_notifications: {}
         - task_key: dim_customer
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/09_dim_customer_scd1_nb
-            source: WORKSPACE
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: fact_purchases
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/02_Facts/02_fact_purchases
+          source: WORKSPACE
+        depends_on:
+        - task_key: dim_date
+        - task_key: dim_product_category
+        - task_key: dim_warehouse
+        - task_key: dim_retailer
+        - task_key: dim_agent
+        - task_key: dim_payment_mode
+        - task_key: dim_product
+        - task_key: dim_wholesaler
+        - task_key: dim_customer
+        email_notifications: {}
+      - task_key: fact_inventory
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/02_Facts/03_fact_inventory
+          source: WORKSPACE
+        depends_on:
+        - task_key: dim_date
+        - task_key: dim_product_category
+        - task_key: dim_warehouse
+        - task_key: dim_retailer
+        - task_key: dim_agent
+        - task_key: dim_payment_mode
+        - task_key: dim_product
+        - task_key: dim_wholesaler
+        - task_key: dim_customer
+        email_notifications: {}
+      - task_key: mart_customer_360
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/01_mart_customer_360
+          source: WORKSPACE
+        depends_on:
         - task_key: fact_sales
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/02_Facts/01_fact_sales
-            source: WORKSPACE
-          depends_on:
-            - task_key: dim_date
-            - task_key: dim_product_category
-            - task_key: dim_warehouse
-            - task_key: dim_retailer
-            - task_key: dim_agent
-            - task_key: dim_payment_mode
-            - task_key: dim_product
-            - task_key: dim_wholesaler
-            - task_key: dim_customer
-          email_notifications: {}
         - task_key: fact_purchases
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/02_Facts/02_fact_purchases
-            source: WORKSPACE
-          depends_on:
-            - task_key: dim_date
-            - task_key: dim_product_category
-            - task_key: dim_warehouse
-            - task_key: dim_retailer
-            - task_key: dim_agent
-            - task_key: dim_payment_mode
-            - task_key: dim_product
-            - task_key: dim_wholesaler
-            - task_key: dim_customer
-          email_notifications: {}
         - task_key: fact_inventory
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/02_Facts/03_fact_inventory
-            source: WORKSPACE
-          depends_on:
-            - task_key: dim_date
-            - task_key: dim_product_category
-            - task_key: dim_warehouse
-            - task_key: dim_retailer
-            - task_key: dim_agent
-            - task_key: dim_payment_mode
-            - task_key: dim_product
-            - task_key: dim_wholesaler
-            - task_key: dim_customer
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: mart_rfm_analysis
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/02_mart_rfm_analysis
+          source: WORKSPACE
+        depends_on:
+        - task_key: fact_sales
+        - task_key: fact_purchases
+        - task_key: fact_inventory
+        email_notifications: {}
+      - task_key: data_quality_check
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/8_Validation_Framework/2_monitoring_quality_tests
+          source: WORKSPACE
+          base_parameters:
+            load_type: full
+        depends_on:
         - task_key: mart_customer_360
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/01_mart_customer_360
-            source: WORKSPACE
-          depends_on:
-            - task_key: fact_sales
-            - task_key: fact_purchases
-            - task_key: fact_inventory
-          email_notifications: {}
         - task_key: mart_rfm_analysis
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/02_mart_rfm_analysis
-            source: WORKSPACE
-          depends_on:
-            - task_key: fact_sales
-            - task_key: fact_purchases
-            - task_key: fact_inventory
-          email_notifications: {}
-        - task_key: data_quality_check
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/8_Validation_Framework/2_monitoring_quality_tests
-            source: WORKSPACE
-            base_parameters:
-              load_type: 'full'
-          depends_on:
-            - task_key: mart_customer_360
-            - task_key: mart_rfm_analysis
-          email_notifications: {}
+        email_notifications: {}
       tags:
         Daily: ''
         ETL: ''
@@ -446,151 +223,151 @@ resources:
       timeout_seconds: 0
       max_concurrent_runs: 3
       tasks:
+      - task_key: generate_incremental_data
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/2_data_generator
+          source: WORKSPACE
+          base_parameters:
+            mode: incremental
+        email_notifications: {}
+      - task_key: dim_date
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/01_dim_date
+          source: WORKSPACE
+        depends_on:
         - task_key: generate_incremental_data
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/2_data_generator
-            source: WORKSPACE
-            base_parameters:
-              mode: 'incremental'
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: dim_product_category
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/02_dim_product_category
+          source: WORKSPACE
+        depends_on:
+        - task_key: generate_incremental_data
+        email_notifications: {}
+      - task_key: dim_warehouse
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/03_dim_warehouse_nb
+          source: WORKSPACE
+        depends_on:
+        - task_key: generate_incremental_data
+        email_notifications: {}
+      - task_key: dim_retailer
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/04_dim_retailer
+          source: WORKSPACE
+        depends_on:
+        - task_key: generate_incremental_data
+        email_notifications: {}
+      - task_key: dim_agent
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/05_dim_agent
+          source: WORKSPACE
+        depends_on:
+        - task_key: generate_incremental_data
+        email_notifications: {}
+      - task_key: dim_payment_mode
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/06_dim_payment_mode
+          source: WORKSPACE
+        depends_on:
+        - task_key: generate_incremental_data
+        email_notifications: {}
+      - task_key: dim_product
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/07_dim_product_nb
+          source: WORKSPACE
+        depends_on:
+        - task_key: generate_incremental_data
+        email_notifications: {}
+      - task_key: dim_customer_cdc
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/06_customer_scd2_cdc
+          source: WORKSPACE
+        depends_on:
+        - task_key: generate_incremental_data
+        email_notifications: {}
+      - task_key: fact_sales_cdc
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/07_sales_fact_cdc
+          source: WORKSPACE
+        depends_on:
         - task_key: dim_date
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/01_dim_date
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
         - task_key: dim_product_category
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/02_dim_product_category
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
         - task_key: dim_warehouse
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/03_dim_warehouse_nb
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
         - task_key: dim_retailer
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/04_dim_retailer
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
         - task_key: dim_agent
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/05_dim_agent
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
         - task_key: dim_payment_mode
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/06_dim_payment_mode
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
         - task_key: dim_product
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/01_Dimensions/07_dim_product_nb
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
         - task_key: dim_customer_cdc
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/06_customer_scd2_cdc
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: fact_purchases_cdc
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/08_purchase_fact_cdc
+          source: WORKSPACE
+        depends_on:
+        - task_key: dim_date
+        - task_key: dim_product_category
+        - task_key: dim_warehouse
+        - task_key: dim_retailer
+        - task_key: dim_agent
+        - task_key: dim_payment_mode
+        - task_key: dim_product
+        - task_key: dim_customer_cdc
+        email_notifications: {}
+      - task_key: fact_inventory_cdc
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/09_inventory_fact_cdc
+          source: WORKSPACE
+        depends_on:
+        - task_key: dim_date
+        - task_key: dim_product_category
+        - task_key: dim_warehouse
+        - task_key: dim_retailer
+        - task_key: dim_agent
+        - task_key: dim_payment_mode
+        - task_key: dim_product
+        - task_key: dim_customer_cdc
+        email_notifications: {}
+      - task_key: incremental_validation
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/8_Validation_Framework/3_incremental_test_suite
+          source: WORKSPACE
+        depends_on:
         - task_key: fact_sales_cdc
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/07_sales_fact_cdc
-            source: WORKSPACE
-          depends_on:
-            - task_key: dim_date
-            - task_key: dim_product_category
-            - task_key: dim_warehouse
-            - task_key: dim_retailer
-            - task_key: dim_agent
-            - task_key: dim_payment_mode
-            - task_key: dim_product
-            - task_key: dim_customer_cdc
-          email_notifications: {}
         - task_key: fact_purchases_cdc
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/08_purchase_fact_cdc
-            source: WORKSPACE
-          depends_on:
-            - task_key: dim_date
-            - task_key: dim_product_category
-            - task_key: dim_warehouse
-            - task_key: dim_retailer
-            - task_key: dim_agent
-            - task_key: dim_payment_mode
-            - task_key: dim_product
-            - task_key: dim_customer_cdc
-          email_notifications: {}
         - task_key: fact_inventory_cdc
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/09_inventory_fact_cdc
-            source: WORKSPACE
-          depends_on:
-            - task_key: dim_date
-            - task_key: dim_product_category
-            - task_key: dim_warehouse
-            - task_key: dim_retailer
-            - task_key: dim_agent
-            - task_key: dim_payment_mode
-            - task_key: dim_product
-            - task_key: dim_customer_cdc
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: mart_customer_360
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/01_mart_customer_360
+          source: WORKSPACE
+        depends_on:
         - task_key: incremental_validation
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/8_Validation_Framework/3_incremental_test_suite
-            source: WORKSPACE
-          depends_on:
-            - task_key: fact_sales_cdc
-            - task_key: fact_purchases_cdc
-            - task_key: fact_inventory_cdc
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: mart_rfm_analysis
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/02_mart_rfm_analysis
+          source: WORKSPACE
+        depends_on:
+        - task_key: incremental_validation
+        email_notifications: {}
+      - task_key: data_quality_check
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/8_Validation_Framework/2_monitoring_quality_tests
+          source: WORKSPACE
+          base_parameters:
+            load_type: incremental
+        depends_on:
         - task_key: mart_customer_360
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/01_mart_customer_360
-            source: WORKSPACE
-          depends_on:
-            - task_key: incremental_validation
-          email_notifications: {}
         - task_key: mart_rfm_analysis
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/04_Gold/02_mart_rfm_analysis
-            source: WORKSPACE
-          depends_on:
-            - task_key: incremental_validation
-          email_notifications: {}
+        email_notifications: {}
+      - task_key: archive_cleanup
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/5_archive_and_cleanup
+          source: WORKSPACE
+        depends_on:
         - task_key: data_quality_check
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/8_Validation_Framework/2_monitoring_quality_tests
-            source: WORKSPACE
-            base_parameters:
-              load_type: 'incremental'
-          depends_on:
-            - task_key: mart_customer_360
-            - task_key: mart_rfm_analysis
-          email_notifications: {}
-        - task_key: archive_cleanup
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/5_archive_and_cleanup
-            source: WORKSPACE
-          depends_on:
-            - task_key: data_quality_check
-          email_notifications: {}
+        email_notifications: {}
       tags:
         Daily: ''
         ETL: ''
@@ -604,20 +381,20 @@ resources:
       timeout_seconds: 0
       max_concurrent_runs: 3
       tasks:
+      - task_key: generate_bronze_data
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/2_data_generator
+          source: WORKSPACE
+          base_parameters:
+            mode: full
+        email_notifications: {}
+      - task_key: dbt_full_refresh
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/03_Dbt/StartHere_DBT
+          source: WORKSPACE
+        depends_on:
         - task_key: generate_bronze_data
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/2_data_generator
-            source: WORKSPACE
-            base_parameters:
-              mode: 'full'
-          email_notifications: {}
-        - task_key: dbt_full_refresh
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/03_Dbt/StartHere_DBT
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_bronze_data
-          email_notifications: {}
+        email_notifications: {}
       tags:
         Daily: ''
         DBT: ''
@@ -631,20 +408,20 @@ resources:
       timeout_seconds: 0
       max_concurrent_runs: 3
       tasks:
+      - task_key: generate_incremental_data
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/2_data_generator
+          source: WORKSPACE
+          base_parameters:
+            mode: incremental
+        email_notifications: {}
+      - task_key: dbt_incremental_run
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/03_Dbt/StartHere_DBT
+          source: WORKSPACE
+        depends_on:
         - task_key: generate_incremental_data
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/2_data_generator
-            source: WORKSPACE
-            base_parameters:
-              mode: 'incremental'
-          email_notifications: {}
-        - task_key: dbt_incremental_run
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/03_Dbt/StartHere_DBT
-            source: WORKSPACE
-          depends_on:
-            - task_key: generate_incremental_data
-          email_notifications: {}
+        email_notifications: {}
       tags:
         Daily: ''
         DBT: ''
@@ -658,11 +435,11 @@ resources:
       timeout_seconds: 0
       max_concurrent_runs: 3
       tasks:
-        - task_key: Create_Genie_Spaces
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/4_Business_Intelligence/2_BI_Production/1_setup/02_genie_space_creation
-            source: WORKSPACE
-          email_notifications: {}
+      - task_key: Create_Genie_Spaces
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/4_Business_Intelligence/2_BI_Production/1_setup/02_genie_space_creation
+          source: WORKSPACE
+        email_notifications: {}
       tags:
         Genie: ''
         OnDemand: ''
@@ -675,436 +452,18 @@ resources:
       timeout_seconds: 0
       max_concurrent_runs: 3
       tasks:
-        - task_key: Streaming_CDC_Setup
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/11_setup_silver_dlt_pipeline
-            source: WORKSPACE
-          email_notifications: {}
+      - task_key: Streaming_CDC_Setup
+        notebook_task:
+          notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/02_Medallion_Architecture/03_Streaming_Cdc/11_setup_silver_dlt_pipeline
+          source: WORKSPACE
+        email_notifications: {}
       tags:
         CDC: ''
         Daily: ''
         Real-Time: ''
         Streaming: ''
       format: MULTI_TASK
-    # 09_daily_bronze_silver_dlt:
-    #   name: 09_Daily_Bronze_Silver_DLT ${var.environment}
-    #   email_notifications: {}
-    #   webhook_notifications: {}
-    #   timeout_seconds: 0
-    #   max_concurrent_runs: 3
-    #   tasks:
-    #     - task_key: DLT_Pipeline_Run
-    #       email_notifications: {}
-    #   tags:
-    #     Daily: ''
-    #     DLT: ''
-    #     Medallion: ''
-    #     Pipeline: ''
-    #   format: MULTI_TASK
-    # COMMENTED OUT: Missing pipeline_task definition - needs pipeline_id
-    # 10_1_agentops:
-    #   name: 10.1_AgentOps ${var.environment}
-    #   email_notifications: {}
-    #   webhook_notifications: {}
-    #   timeout_seconds: 0
-    #   max_concurrent_runs: 3
-    #   tasks:
-    #     - task_key: Job_10_Knowledge_Retrieval
-    #       run_job_task:
-    #         job_id: 1019676027108696
-    #     - task_key: Job_11_Ecommerce_Intelligence
-    #       run_job_task:
-    #         job_id: 3306513460846
-    #     - task_key: Job_12_Customer_360
-    #       run_job_task:
-    #         job_id: 778140154865869
-    #     - task_key: Job_13_Auto_Documentation
-    #       run_job_task:
-    #         job_id: 504744272397303
-    #     - task_key: Job_14_Training_Data_Extraction
-    #       run_job_task:
-    #         job_id: 760325156976714
-    #     - task_key: Job_15_Churn_Prediction
-    #       depends_on:
-    #         - task_key: Job_14_Training_Data_Extraction
-    #       run_job_task:
-    #         job_id: 684505024549623
-    #     - task_key: Job_16_Product_Recommendation
-    #       depends_on:
-    #         - task_key: Job_14_Training_Data_Extraction
-    #       run_job_task:
-    #         job_id: 514677945822644
-    #     - task_key: Job_17_Demand_Forecasting
-    #       depends_on:
-    #         - task_key: Job_14_Training_Data_Extraction
-    #       run_job_task:
-    #         job_id: 978154014554805
-    #     - task_key: Job_18_Next_Purchase_Prediction
-    #       depends_on:
-    #         - task_key: Job_14_Training_Data_Extraction
-    #       run_job_task:
-    #         job_id: 324162142408562
-    #   tags:
-    #     AgentOps: ''
-    #     Daily: ''
-    #     Master: ''
-    #     Orchestration: ''
-    #   format: MULTI_TASK
-    # COMMENTED OUT: Job IDs reference non-existent jobs from another workspace
-    10_daily_knowledge_retrieval_system:
-      name: 10_Daily_Knowledge_Retrieval_System ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 10DailyKnowledgeRetrievalSystem
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/2_Rag_Pipeline/knowledge_retrieval_system
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        AI: ''
-        Daily: ''
-        Knowledge-Graph: ''
-        RAG: ''
-      format: MULTI_TASK
-    11_daily_ecommerce_intelligence:
-      name: 11_Daily_Ecommerce_Intelligence ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 11DailyEcommerceIntelligence
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/2_Rag_Pipeline/ecommerce_intelligence
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Analytics: ''
-        BI: ''
-        Daily: ''
-        Ecommerce: ''
-      format: MULTI_TASK
-    12_daily_customer_360:
-      name: 12_Daily_Customer_360 ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 12DailyCustomer360
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/2_Rag_Pipeline/customer_360
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Analytics: ''
-        CRM: ''
-        Customer: ''
-        Daily: ''
-      format: MULTI_TASK
-    13_daily_auto_documentation:
-      name: 13_Daily_Auto_Documentation ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 13DailyAutoDocumentation
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/3_AI_Agents/Knowledge_Hub/Auto_Documentation
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Automation: ''
-        Daily: ''
-        Documentation: ''
-      format: MULTI_TASK
-    14_weekly_training_data_extraction:
-      name: 14_Weekly_Training_Data_Extraction ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: Chat_Extractor
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/3_AI_Agents/Knowledge_Hub/Training_Data_Extraction/log_collector/1_REAL_Chat_Extractor
-            source: WORKSPACE
-          email_notifications: {}
-        - task_key: Google_Drive_Extractor
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/3_AI_Agents/Knowledge_Hub/Training_Data_Extraction/log_collector/2_Google_Drive_Universal_Extractor
-            source: WORKSPACE
-          depends_on:
-            - task_key: Chat_Extractor
-          email_notifications: {}
-      tags:
-        Data-Prep: ''
-        Feature-Engineering: ''
-        ML: ''
-        Weekly: ''
-      format: MULTI_TASK
-    15_weekly_churn_prediction:
-      name: 15_Weekly_Churn_Prediction ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 15WeeklyChurnPrediction
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/01_Churn_Prediction_Training
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Customer: ''
-        ML: ''
-        Prediction: ''
-        Weekly: ''
-      format: MULTI_TASK
-    16_weekly_product_recommendation:
-      name: 16_Weekly_Product_Recommendation ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 16WeeklyProductRecommendation
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/02_Product_Recommendation_Training
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Ecommerce: ''
-        ML: ''
-        Recommendation: ''
-        Weekly: ''
-      format: MULTI_TASK
-    17_weekly_demand_forecasting:
-      name: 17_Weekly_Demand_Forecasting ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 17WeeklyDemandForecasting
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/03_Demand_Forecasting_Training
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Forecasting: ''
-        ML: ''
-        Supply-Chain: ''
-        Weekly: ''
-      format: MULTI_TASK
-    18_weekly_next_purchase_prediction:
-      name: 18_Weekly_Next_Purchase_Prediction ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 18WeeklyNextPurchasePrediction
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/04_Next_Purchase_Prediction_Training
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Customer: ''
-        ML: ''
-        Prediction: ''
-        Weekly: ''
-      format: MULTI_TASK
-    19_daily_incremental_refresh:
-      name: 19_Daily_Incremental_Refresh ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: Lakehouse_Incremental_Load
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/2_Orchestration/Data_Platform/13_Start_IncrementalLoad
-            source: WORKSPACE
-          email_notifications: {}
-        - task_key: DBT_Incremental
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/2_Orchestration/Data_Platform/15_StartDBT_Incremental
-            source: WORKSPACE
-          depends_on:
-            - task_key: Lakehouse_Incremental_Load
-          email_notifications: {}
-      tags:
-        Daily: ''
-        ETL: ''
-        Incremental: ''
-        Refresh: ''
-      format: MULTI_TASK
-    20_weekly_app_deployment:
-      name: 20_Weekly_App_Deployment ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 20WeeklyAppDeployment
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/2_Orchestration/AI_Platform/6_App_Deployment
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        App: ''
-        CI/CD: ''
-        Deployment: ''
-        Weekly: ''
-      format: MULTI_TASK
-    21_daily_lakebase_sync:
-      name: 21_Daily_Lakebase_Sync ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 21DailyLakebaseSync
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/2_Data_Production/06_Lakebase_LTAP/03_oltp_to_olap_sync
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Daily: ''
-        Integration: ''
-        Lakebase: ''
-        Sync: ''
-      format: MULTI_TASK
-    22_master_skillai_weekly:
-      name: 22_Master_SkillAI_Weekly ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: Full_DBT_Transform
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/2_Orchestration/Data_Platform/14_StartDBT_Full
-            source: WORKSPACE
-          email_notifications: {}
-        - task_key: Training_Data_Extraction
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/3_AI_Agents/Knowledge_Hub/Training_Data_Extraction/log_collector/1_REAL_Chat_Extractor
-            source: WORKSPACE
-          depends_on:
-            - task_key: Full_DBT_Transform
-          email_notifications: {}
-        - task_key: Churn_Prediction
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/01_Churn_Prediction_Training
-            source: WORKSPACE
-          depends_on:
-            - task_key: Training_Data_Extraction
-          email_notifications: {}
-        - task_key: Product_Recommendation
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/02_Product_Recommendation_Training
-            source: WORKSPACE
-          depends_on:
-            - task_key: Training_Data_Extraction
-          email_notifications: {}
-        - task_key: Demand_Forecasting
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/03_Demand_Forecasting_Training
-            source: WORKSPACE
-          depends_on:
-            - task_key: Training_Data_Extraction
-          email_notifications: {}
-        - task_key: Next_Purchase_Prediction
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/3_AI_Platform/1_MLOps/04_Next_Purchase_Prediction_Training
-            source: WORKSPACE
-          depends_on:
-            - task_key: Training_Data_Extraction
-          email_notifications: {}
-        - task_key: Deploy_PR_Reviewer
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/2_Orchestration/AI_Platform/6_App_Deployment
-            source: WORKSPACE
-          depends_on:
-            - task_key: Churn_Prediction
-            - task_key: Product_Recommendation
-            - task_key: Demand_Forecasting
-            - task_key: Next_Purchase_Prediction
-          email_notifications: {}
-      tags:
-        Master: ''
-        Orchestration: ''
-        Weekly: ''
-      format: MULTI_TASK
-    23_monthly_portfolio_github_autocommit:
-      name: 23_Monthly_Portfolio_GitHub_AutoCommit ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      tasks:
-        - task_key: 23MonthlyPortfolioGitHubAutoCommit
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/5_Growth_Accelerator/5_ContentStudio/github_automation
-            source: WORKSPACE
-          email_notifications: {}
-      tags:
-        Automation: ''
-        GitHub: ''
-        Monthly: ''
-        Portfolio: ''
-      format: MULTI_TASK
-    starthere:
-      name: StartHere ${var.environment}
-      max_concurrent_runs: 3
-      email_notifications:
-        on_failure:
-          - skillaipath11@gmail.com
-      tasks:
-        - task_key: run_starthere
-          notebook_task:
-            notebook_path: /Shared/${var.environment}/SkillAIPath/1_Canvas/StartHere
-            source: WORKSPACE
-      tags:
-        environment: ${var.environment}
-      format: MULTI_TASK
-    
-    99_env_cleanup_reset:
-      name: 99_Env_Cleanup_Reset ${var.environment}
-      email_notifications: {}
-      webhook_notifications: {}
-      timeout_seconds: 0
-      max_concurrent_runs: 3
-      description: "Nuclear environment reset - Deletes ALL content under /Shared/ and /Users/, drops all catalogs, deletes all jobs/dashboards. Use with EXTREME CAUTION."
-      queue:
-        enabled: false
-      tasks:
-        - task_key: nuclear_cleanup
-          notebook_task:
-            # TODO: Move notebook from /Users/skillaipath3@gmail.com/ to /Shared/${var.environment}/SkillAIPath/1_Canvas/1_Setup/
-            notebook_path: /Users/skillaipath3@gmail.com/ENV_CLEANUP_Nuclear_Reset
-            source: WORKSPACE
-            base_parameters:
-              dry_run: "true"
-              confirmation: ""
-              include_catalogs: "true"
-              include_jobs: "true"
-              include_dashboards: "true"
-              include_workspace: "true"
-          timeout_seconds: 0
-          email_notifications: {}
-      tags:
-        environment: ${var.environment}
-        cleanup: "true"
-        destructive: "true"
-      format: MULTI_TASK
-  
+
   dashboards:
     agent_and_channel_performance_dashboard:
       display_name: Agent & Channel Performance Dashboard - ${var.environment}
@@ -1115,16 +474,6 @@ resources:
       display_name: Cost & DBU Tracker - ${var.environment}
       warehouse_id: ${var.warehouse_id}
       file_path: ./4_Business_Intelligence/2_BI_Production/3_dashboards/Cost & DBU Tracker.lvdash.json
-      embed_credentials: true
-    customer_insights_dashboard:
-      display_name: Customer Insights Dashboard - ${var.environment}
-      warehouse_id: ${var.warehouse_id}
-      file_path: ./4_Business_Intelligence/2_BI_Production/3_dashboards/Customer Insights Dashboard.lvdash.json
-      embed_credentials: true
-    executive_kpi_dashboard:
-      display_name: Executive KPI Dashboard - ${var.environment}
-      warehouse_id: ${var.warehouse_id}
-      file_path: ./4_Business_Intelligence/2_BI_Production/3_dashboards/Executive KPI Dashboard.lvdash.json
       embed_credentials: true
     inventory_management_dashboard:
       display_name: Inventory Management Dashboard - ${var.environment}
