@@ -52,6 +52,11 @@ on:
         type: boolean
         description: 'Deploy to: taskforce'
         default: false
+
+      deploy_vikas:
+        type: boolean
+        description: 'Deploy to: vikas'
+        default: false
       # INSERT_CHECKBOX_BEFORE_THIS_LINE
       
       # Deploy to all accounts (overrides individual selections)
@@ -133,6 +138,10 @@ jobs:
 
           if [[ "${{ github.event.inputs.deploy_taskforce }}" == "true" ]]; then
             selected_accounts="${selected_accounts} taskforce"
+          fi
+
+          if [[ "${{ github.event.inputs.deploy_vikas }}" == "true" ]]; then
+            selected_accounts="${selected_accounts} vikas"
           fi
           # INSERT_LOGIC_BEFORE_THIS_LINE
           
@@ -230,7 +239,10 @@ jobs:
             sap3) export DATABRICKS_TOKEN="${{ secrets.DATABRICKS_TOKEN_SAP3 }}" ;;
             SAP67) export DATABRICKS_TOKEN="${{ secrets.DATABRICKS_TOKEN_SAP67 }}" ;;
             taskforce) export DATABRICKS_TOKEN="${{ secrets.DATABRICKS_TOKEN_taskforce }}" ;;
-            # INSERT_CASE_BEFORE_THIS_LINE
+            vikas)
+                      export DATABRICKS_TOKEN="${{ secrets.DATABRICKS_TOKEN_VIKAS }}"
+                      ;;
+                    # INSERT_CASE_BEFORE_THIS_LINE
             *) echo "❌ Unknown account"; exit 1 ;;
           esac
           
@@ -336,7 +348,10 @@ jobs:
               export DATABRICKS_TOKEN="${{ secrets.DATABRICKS_TOKEN_SAP67 }}"
               ;;
             taskforce) export DATABRICKS_TOKEN="${{ secrets.DATABRICKS_TOKEN_taskforce }}" ;;
-            # INSERT_CASE_BEFORE_THIS_LINE
+            vikas)
+                      export DATABRICKS_TOKEN="${{ secrets.DATABRICKS_TOKEN_VIKAS }}"
+                      ;;
+                    # INSERT_CASE_BEFORE_THIS_LINE
             *)
               echo "❌ Unknown account: ${{ matrix.account }}"
               echo "💡 This account was not found in the case statement"

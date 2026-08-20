@@ -20,3 +20,6 @@ accounts:
   - name: taskforce
     host: https://dbc-7f2ff232-aba9.cloud.databricks.com
     warehouse_id: 7209c59e9d7e2e2f
+  - name: vikas
+    host: https://dbc-bbc2253c-ea07.cloud.databricks.com
+    warehouse_id: d9ec01342992dc2b
