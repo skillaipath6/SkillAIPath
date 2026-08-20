@@ -1,0 +1,7 @@
+# BharatMart Supply Chain API - Production Dependencies
+Flask==3.0.0
+flask-cors==4.0.0
+Flask-Limiter==3.5.0
+databricks-sql-connector==3.0.2
+gunicorn==21.2.0
+python-dotenv==1.0.0

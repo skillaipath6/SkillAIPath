@@ -1,0 +1,10 @@
+# SkillAIPath - Gold Analytics Dashboard
+# Elite Databricks App for Executive Analytics and ML Insights
+
+command: ["streamlit", "run", "app.py", "--server.port=8080"]
+
+resources:
+  - name: sap-warehouse
+    description: SQL warehouse for gold layer analytics
+    sql_warehouse:
+      id: "auto"

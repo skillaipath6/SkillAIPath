@@ -1,0 +1,52 @@
+bundle:
+  name: sapdbx
+
+variables:
+  environment:
+    description: Deployment environment (dev/uat/prod)
+    default: dev
+  
+  notification_email:
+    description: Email for job failure notifications
+    default: your-email@example.com
+
+targets:
+  dev:
+    mode: development
+    workspace:
+      host: ${DATABRICKS_HOST}
+    variables:
+      environment: dev
+  
+  uat:
+    mode: development
+    workspace:
+      host: ${DATABRICKS_HOST}
+    variables:
+      environment: uat
+  
+  prod:
+    mode: production
+    workspace:
+      host: ${DATABRICKS_HOST}
+    variables:
+      environment: prod
+
+resources:
+  jobs:
+    sap_pipeline:
+      name: "SkillAIPath Pipeline (${var.environment})"
+      email_notifications:
+        on_failure:
+          - "${var.notification_email}"
+      tasks:
+        - task_key: run_canvas
+          notebook_task:
+            notebook_path: "/Workspace/Shared/${var.environment}/SkillAIPath/1_Canvas/StartHere"
+            source: WORKSPACE
+            base_parameters:
+              environment: "${var.environment}"
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: "Standard_DS3_v2"
+            num_workers: 2

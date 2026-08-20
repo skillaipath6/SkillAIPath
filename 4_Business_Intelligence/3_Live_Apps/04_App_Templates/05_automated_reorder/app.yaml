@@ -1,0 +1,75 @@
+# SkillAIPath Inventory Reorder System - Databricks App Configuration
+# Version: 2.0.0
+
+# Entry point command
+command:
+  - streamlit
+  - run
+  - app.py
+  - --server.port
+  - "8080"
+  - --server.address
+  - "0.0.0.0"
+  - --browser.gatherUsageStats
+  - "false"
+  - --server.enableXsrfProtection
+  - "true"
+
+# Environment variables (override via Databricks App settings)
+env:
+  # Application
+  - name: ENVIRONMENT
+    value: production
+  - name: LOG_LEVEL
+    value: INFO
+  
+  # Database Configuration
+  - name: SKILLAIPPATH_CATALOG
+    value: sap_dev
+  - name: SKILLAIPPATH_SCHEMA_SILVER
+    value: silver
+  - name: SKILLAIPPATH_SCHEMA_BRONZE
+    value: bronze
+  
+  # Business Rules
+  - name: LEAD_TIME_DAYS
+    value: "7"
+  - name: SAFETY_STOCK_DAYS
+    value: "5"
+  - name: VELOCITY_LOOKBACK_DAYS
+    value: "30"
+  - name: LOW_STOCK_THRESHOLD
+    value: "50"
+  
+  # Validation Rules
+  - name: MIN_ORDER_QUANTITY
+    value: "1"
+  - name: MAX_ORDER_QUANTITY
+    value: "10000"
+  - name: MAX_UNIT_PRICE
+    value: "1000000.0"
+  
+  # Databricks SQL Warehouse Connection
+  # These are automatically injected by Databricks Apps runtime:
+  # - DATABRICKS_SERVER_HOSTNAME
+  # - DATABRICKS_HTTP_PATH
+  # - DATABRICKS_TOKEN
+
+# Resource limits (adjust based on usage patterns)
+resources:
+  cpu: "1.0"
+  memory: "2Gi"
+
+# Health check configuration
+health_check:
+  enabled: true
+  path: /_stcore/health
+  interval_seconds: 30
+  timeout_seconds: 5
+  unhealthy_threshold: 3
+
+# Restart policy
+restart_policy:
+  on_failure: true
+  max_retries: 3
+  backoff_seconds: 10

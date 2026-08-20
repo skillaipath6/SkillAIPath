@@ -1,0 +1,17 @@
+# Exclude Genie Space files (workspace-native assets not supported in Git)
+*.geniespace.json
+
+# MLflow experiments and models (workspace-native assets not supported in Git)
+*_experiment
+*_prediction_experiment
+
+# MLflow experiment artifacts - specific directories
+churn_prediction_experiment/
+next_purchase_prediction_experiment/
+product_recommendation/
+3_AI_Platform/1_MLOps/product_recommendation
+*.backup
+__pycache__/
+*.pyc
+*.backup_*
+*.last_run_watermark

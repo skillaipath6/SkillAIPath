@@ -1,0 +1,41 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Bronze layer - Raw data ingested by Databricks (owned by ingestion pipeline, not dbt)"
+    database: sap_dev
+    schema: bronze
+    tables:
+      - name: sales
+        identifier: stg_sales
+        description: "Raw sales transactions from source system"
+        columns:
+          - name: OrderID
+            description: "Unique order identifier"
+            tests:
+              - unique
+              - not_null
+          - name: finalprice
+            description: "Final transaction amount"
+            tests:
+              - not_null
+      
+      - name: purchases
+        identifier: stg_purchase
+        description: "Raw purchase orders from suppliers"
+        columns:
+          - name: PurchaseID
+            description: "Unique purchase order identifier"
+            tests:
+              - unique
+              - not_null
+      
+      - name: inventory
+        identifier: stg_stock_status
+        description: "Daily inventory snapshots"
+        columns:
+          - name: StockID
+            description: "Unique stock record identifier"
+            tests:
+              - unique
+              - not_null

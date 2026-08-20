@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Preparation Guide - BharatMartDBX</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .toc {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .toc h2 {
+            margin-top: 0;
+            color: #43e97b;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 10px 0;
+        }
+        .toc a {
+            color: #43e97b;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h1 {
+            color: #43e97b;
+            border-bottom: 3px solid #43e97b;
+            padding-bottom: 10px;
+        }
+        .section h2 {
+            color: #38f9d7;
+            margin-top: 30px;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #43e97b;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #43e97b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .back-to-top:hover {
+            background: #38f9d7;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Interview Preparation Guide</h1>
+        <p>BharatMartDBX - Behavioral and Technical Interview Preparation</p>
+        <p>Generated: 2025-01-06</p>
+    </div>
+
+    <div class="toc" id="toc">
+        <h2>Table of Contents</h2>
+        <ul>
+            <li><a href="#section-1">1. INTERVIEW PREPARATION GUIDE</a></li>
+            <li><a href="#section-2">2. behavioral interview</a></li>
+        </ul>
+    </div>
+
+    <div class="section" id="section-1">
+        <h1>INTERVIEW PREPARATION GUIDE</h1>
+<br>
+<p>**For:** BharatMartDBX Graduates</p>
+<p>**Purpose:** Technical & Behavioral Interview Readiness</p>
+<p>**Target Roles:** Junior/Mid/Senior Data Engineer (₹10-20 LPA)</p>
+<br>
+<p>---</p>
+<br>
+<h2>OVERVIEW</h2>
+<br>
+<p>This guide consolidates all interview preparation materials from BharatMartDBX into ONE comprehensive resource.</p>
+<br>
+<p>**Covers:**</p>
+<p>- Technical interview questions (module-by-module)</p>
+<p>- System design scenarios</p>
+<p>- Behavioral interview questions</p>
+<p>- Portfolio presentation scripts</p>
+<p>- Resume optimization</p>
+<p>- LinkedIn strategy</p>
+<p>- Salary negotiation</p>
+<br>
+<p>**No student framing - direct professional guidance.**</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 1: TECHNICAL INTERVIEW QUESTIONS</h2>
+<br>
+<h3>Module 00: UTILS (Unity Catalog, Configuration)</h3>
+<br>
+<p>**Q: Explain Unity Catalog 3-level namespace.**</p>
+<p>**A:** Unity Catalog uses catalog.schema.table naming:</p>
+<p>- **Catalog:** Top-level container (e.g., production, dev)</p>
+<p>- **Schema:** Logical grouping (e.g., retail, finance)</p>
+<p>- **Table:** Data asset (e.g., customers, sales)</p>
+<br>
+<p>This enables multi-tenant isolation, granular permissions, and environment separation.</p>
+<br>
+<p>**Q: How do you handle configuration management across environments?**</p>
+<p>**A:** Use environment variables or config classes:</p>
+<pre><code>
+class BharatMartDBXConfig:
+    def __init__(self, env="dev"):
+        self.catalog = f"bharatmart_{env}"
+        self.schema = "retail"
+
+config = BharatMartDBXConfig(env=os.getenv("ENV", "dev"))
+</code></pre>
+<br>
+<p>**Q: What are validation gates and why use them?**</p>
+<p>**A:** Validation gates are checkpoints that verify data quality before proceeding:</p>
+<p>- Row count checks (expected vs actual)</p>
+<p>- NULL percentage monitoring</p>
+<p>- Schema consistency validation</p>
+<p>- Data freshness checks</p>
+<br>
+<p>They prevent bad data from flowing downstream.</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 01: DIMENSIONS (SCD Patterns)</h3>
+<br>
+<p>**Q: Explain SCD Type 2. When would you use it?**</p>
+<p>**A:** SCD Type 2 tracks historical changes by creating new rows:</p>
+<p>- Add `effective_date`, `end_date`, `is_current` columns</p>
+<p>- On update: Set old row `is_current = False`, insert new row `is_current = True`</p>
+<p>- Use for: Customer addresses, product prices, employee job titles</p>
+<br>
+<p>Example: Customer moves from Delhi to Mumbai - we keep both records with timestamps.</p>
+<br>
+<p>**Q: Difference between SCD Type 1 and Type 2?**</p>
+<p>**A:**</p>
+<p>- **Type 1:** Overwrite (no history) - e.g., product descriptions</p>
+<p>- **Type 2:** Add new row (full history) - e.g., customer addresses</p>
+<br>
+<p>**Q: How do you handle late-arriving dimension updates?**</p>
+<p>**A:** Use merge logic with timestamp validation:</p>
+<pre><code>
+MERGE INTO dim_customer target
+USING updates source
+ON target.customer_id = source.customer_id
+   AND source.effective_date BETWEEN target.effective_date AND target.end_date
+WHEN MATCHED THEN UPDATE SET is_current = False
+WHEN NOT MATCHED THEN INSERT ...
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 02: FACTS (Star Schema)</h3>
+<br>
+<p>**Q: Difference between fact and dimension tables?**</p>
+<p>**A:**</p>
+<p>- **Fact:** Measures, metrics, transactions (sales_amount, quantity) - changes frequently</p>
+<p>- **Dimension:** Descriptive attributes (customer_name, product_name) - changes slowly</p>
+<br>
+<p>**Q: What is a star schema? Benefits?**</p>
+<p>**A:** Central fact table surrounded by dimension tables:</p>
+<p>- **Benefits:** Simple queries, fast aggregations, intuitive for business users</p>
+<p>- **Example:** `fact_sales` joins to `dim_customer`, `dim_product`, `dim_store`, `dim_date`</p>
+<br>
+<p>**Q: Difference between transaction fact and snapshot fact?**</p>
+<p>**A:**</p>
+<p>- **Transaction:** Each row is an event (sale, purchase) - additive</p>
+<p>- **Snapshot:** Periodic state (inventory levels) - semi-additive (can sum across dimensions, not time)</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 03: DEBUGGING</h3>
+<br>
+<p>**Q: How do you debug a failed Spark job?**</p>
+<p>**A:**</p>
+<p>1. Check Spark UI (Stages, Tasks, Executors)</p>
+<p>2. Review executor logs (stderr, stdout)</p>
+<p>3. Look for: Data skew, OOM errors, shuffle issues</p>
+<p>4. Use `EXPLAIN` to see query plan</p>
+<p>5. Check for missing partitions or corrupted files</p>
+<br>
+<p>**Q: What causes data skew? How to fix?**</p>
+<p>**A:**</p>
+<p>- **Cause:** Uneven data distribution (e.g., 80% of customers in one city)</p>
+<p>- **Symptoms:** One task takes 10x longer than others</p>
+<p>- **Fix:** Salting (add random prefix to key), repartition, broadcast small tables</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 04: STREAMING_CDC (Auto Loader, CDC)</h3>
+<br>
+<p>**Q: Explain Auto Loader. Why use it?**</p>
+<p>**A:** Auto Loader incrementally processes new files in cloud storage:</p>
+<p>- Schema inference and evolution</p>
+<p>- Exactly-once processing</p>
+<p>- Checkpoint management</p>
+<p>- No manual file tracking</p>
+<br>
+<p>Better than manually listing files because it scales to millions of files.</p>
+<br>
+<p>**Q: What is CDC? How do you implement it on Databricks?**</p>
+<p>**A:** Change Data Capture tracks INSERT, UPDATE, DELETE from source databases:</p>
+<p>- Capture change events (operation, before/after values)</p>
+<p>- Apply to Delta Lake using MERGE INTO</p>
+<p>- Handle out-of-order events with sequence numbers</p>
+<p>- Example: Sync MySQL customer table to Databricks hourly</p>
+<br>
+<p>**Q: Difference between streaming and batch processing?**</p>
+<p>**A:**</p>
+<p>- **Streaming:** Process data as it arrives (low latency, continuous)</p>
+<p>- **Batch:** Process data in bulk (high throughput, scheduled)</p>
+<p>- **When to use:** Streaming for real-time dashboards, batch for large historical loads</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 05: GOLD (Business Marts)</h3>
+<br>
+<p>**Q: What is Customer 360? How do you build it?**</p>
+<p>**A:** Unified view of customer across all touchpoints:</p>
+<p>- Demographics (dim_customer)</p>
+<p>- Transaction history (fact_sales)</p>
+<p>- Behavior metrics (RFM scores)</p>
+<p>- Engagement data (support tickets, emails)</p>
+<br>
+<p>Aggregate into one wide table for business users.</p>
+<br>
+<p>**Q: Explain RFM analysis.**</p>
+<p>**A:** Recency, Frequency, Monetary segmentation:</p>
+<p>- **Recency:** Days since last purchase</p>
+<p>- **Frequency:** Number of purchases</p>
+<p>- **Monetary:** Total spend</p>
+<br>
+<p>Score 1-5 on each dimension, combine into segments (e.g., 555 = Champions, 111 = Lost).</p>
+<br>
+<p>**Q: How do you optimize gold layer queries?**</p>
+<p>**A:**</p>
+<p>- Use OPTIMIZE and Z-ORDER on frequently filtered columns</p>
+<p>- Materialize views for common aggregations</p>
+<p>- Partition by date for time-series queries</p>
+<p>- Use Liquid Clustering for multi-dimensional filtering</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 06: ORCHESTRATION (Jobs, Workflows)</h3>
+<br>
+<p>**Q: How do you orchestrate a multi-step pipeline?**</p>
+<p>**A:** Use Databricks Jobs with task dependencies:</p>
+<pre><code>
+# databricks.yml
+resources:
+  jobs:
+    bharatmart_pipeline:
+      tasks:
+        - task_key: bronze
+          notebook_task: 00_UTILS/01_data_generation
+        - task_key: silver
+          notebook_task: 01_DIMENSIONS/01_date_scd0
+          depends_on: [bronze]
+        - task_key: gold
+          notebook_task: 05_GOLD/01_customer_360
+          depends_on: [silver]
+</code></pre>
+<br>
+<p>**Q: How do you handle job failures?**</p>
+<p>**A:**</p>
+<p>- Retry logic with exponential backoff</p>
+<p>- Alert via email/Slack on repeated failures</p>
+<p>- Checkpoint data at each stage</p>
+<p>- Log errors to monitoring system</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 07: OPTIMIZATIONS</h3>
+<br>
+<p>**Q: Explain Delta Lake OPTIMIZE command.**</p>
+<p>**A:** Compacts small files into larger ones:</p>
+<pre><code>
+OPTIMIZE fact_sales;
+</code></pre>
+<p>- Reduces file count (improves query performance)</p>
+<p>- Combines small files from streaming writes</p>
+<p>- Run after large INSERT/UPDATE operations</p>
+<br>
+<p>**Q: What is Z-ORDER? When to use it?**</p>
+<p>**A:** Co-locate related data in the same files:</p>
+<pre><code>
+OPTIMIZE fact_sales ZORDER BY (customer_id, transaction_date);
+</code></pre>
+<p>- Use on frequently filtered columns</p>
+<p>- Improves query performance (skips unnecessary files)</p>
+<p>- Different from partitioning (Z-ORDER doesn't create directories)</p>
+<br>
+<p>**Q: Difference between OPTIMIZE and VACUUM?**</p>
+<p>**A:**</p>
+<p>- **OPTIMIZE:** Compacts small files (improves read performance)</p>
+<p>- **VACUUM:** Deletes old file versions (frees storage, runs after retention period)</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 08: DEVOPS (DABs, CI/CD)</h3>
+<br>
+<p>**Q: What are Databricks Asset Bundles (DABs)?**</p>
+<p>**A:** Infrastructure-as-code for Databricks:</p>
+<p>- Define jobs, notebooks, pipelines in YAML</p>
+<p>- Deploy across environments (dev/uat/prod)</p>
+<p>- Version control with Git</p>
+<p>- Automate deployments via CI/CD</p>
+<br>
+<p>**Q: How do you implement CI/CD for data pipelines?**</p>
+<p>**A:**</p>
+<p>1. Code in Git (GitHub, GitLab)</p>
+<p>2. Unit tests on pull requests</p>
+<p>3. Deploy to dev environment automatically</p>
+<p>4. Manual approval for prod</p>
+<p>5. Monitor with alerts</p>
+<br>
+<p>**Q: How do you handle secrets in DABs?**</p>
+<p>**A:** Use Databricks Secret Scopes:</p>
+<pre><code>
+tasks:
+  - notebook_task:
+      secrets:
+        - key: api_key
+          scope: production
+          key: external_api_key
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 09: DBT (SQL Transformations)</h3>
+<br>
+<p>**Q: Why use dbt on Databricks?**</p>
+<p>**A:**</p>
+<p>- SQL-based transformations (no Spark/Python needed)</p>
+<p>- Built-in testing and documentation</p>
+<p>- Version control for transformations</p>
+<p>- Modular, reusable models</p>
+<p>- Integrates with Unity Catalog</p>
+<br>
+<p>**Q: Difference between dbt models and views?**</p>
+<p>**A:**</p>
+<p>- **dbt models:** Materialized as tables or views (configurable)</p>
+<p>- **views:** Always virtual (no storage)</p>
+<br>
+<p>dbt adds testing, lineage, documentation on top.</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 10: GOVERNANCE (Unity Catalog, ABAC)</h3>
+<br>
+<p>**Q: How do you implement row-level security?**</p>
+<p>**A:** Use row filters in Unity Catalog:</p>
+<pre><code>
+CREATE ROW FILTER customer_region_filter AS (region)
+  RETURN region = current_user();
+
+ALTER TABLE customers SET ROW FILTER customer_region_filter ON (region);
+</code></pre>
+<br>
+<p>**Q: What is ABAC? Benefits?**</p>
+<p>**A:** Attribute-Based Access Control:</p>
+<p>- Permissions based on attributes (tags, metadata)</p>
+<p>- Example: Users with `PII_ACCESS` tag see sensitive columns</p>
+<p>- More flexible than RBAC (role-based)</p>
+<br>
+<p>**Q: How do you track data lineage?**</p>
+<p>**A:** Unity Catalog auto-captures lineage:</p>
+<p>- Table → Table (transformations)</p>
+<p>- Table → Dashboard (consumption)</p>
+<p>- View in Lineage Explorer UI</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 11: ML_PIPELINE (MLflow, Model Training)</h3>
+<br>
+<p>**Q: How do you track ML experiments?**</p>
+<p>**A:** Use MLflow:</p>
+<pre><code>
+import mlflow
+
+with mlflow.start_run():
+    mlflow.log_param("max_depth", 10)
+    mlflow.log_metric("accuracy", 0.92)
+    mlflow.sklearn.log_model(model, "model")
+</code></pre>
+<br>
+<p>**Q: How do you version ML models?**</p>
+<p>**A:** Register models in Unity Catalog:</p>
+<pre><code>
+mlflow.register_model(
+    model_uri="runs:/abc123/model",
+    name="churn_model"
+)
+</code></pre>
+<p>- Tag versions (champion, challenger)</p>
+<p>- Track lineage (training data → model)</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 12: PROJECT_GUIDE (Portfolio, Documentation)</h3>
+<br>
+<p>**Q: How do you explain your portfolio project?**</p>
+<p>**A:** Use STAR method:</p>
+<p>- **Situation:** Built end-to-end data platform for retail analytics</p>
+<p>- **Task:** Process 1.1M records, build 5 gold marts</p>
+<p>- **Action:** Implemented bronze/silver/gold layers, SCD Type 2, streaming pipelines</p>
+<p>- **Result:** 100% data quality score, real-time dashboards, deployed to production</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 13: GOLD_MODERN (Materialized Views, Streaming Gold)</h3>
+<br>
+<p>**Q: What are materialized views? Benefits?**</p>
+<p>**A:** Pre-computed aggregations stored as tables:</p>
+<pre><code>
+CREATE MATERIALIZED VIEW sales_summary AS
+SELECT date, SUM(amount) FROM fact_sales GROUP BY date;
+</code></pre>
+<p>- Faster queries (no aggregation at query time)</p>
+<p>- Auto-refresh on source data changes</p>
+<br>
+<p>**Q: How do you build real-time dashboards?**</p>
+<p>**A:** Use streaming aggregations:</p>
+<pre><code>
+(spark.readStream.table("fact_sales")
+  .groupBy("date").agg(sum("amount"))
+  .writeStream.table("sales_realtime"))
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 14: COST_MONITORING</h3>
+<br>
+<p>**Q: How do you optimize Databricks costs?**</p>
+<p>**A:**</p>
+<p>- Use serverless compute (auto-scales, no idle clusters)</p>
+<p>- Right-size clusters (don't over-provision)</p>
+<p>- Use spot instances for non-critical jobs</p>
+<p>- OPTIMIZE tables to reduce storage</p>
+<p>- Monitor with system tables (billable_usage)</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 15: LAKEHOUSE_FEDERATION</h3>
+<br>
+<p>**Q: What is Lakehouse Federation?**</p>
+<p>**A:** Query external databases (MySQL, Postgres, Snowflake) without ETL:</p>
+<pre><code>
+CREATE CONNECTION mysql_prod
+TYPE mysql
+OPTIONS (host '...', port '3306');
+
+SELECT * FROM mysql_prod.production.customers;
+</code></pre>
+<br>
+<p>**Q: When to use Federation vs ETL?**</p>
+<p>**A:**</p>
+<p>- **Federation:** Infrequent queries, small datasets, no transformation</p>
+<p>- **ETL:** Frequent queries, large datasets, need transformations</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 16: EXTERNAL_SOURCES (REST APIs, Kafka)</h3>
+<br>
+<p>**Q: How do you ingest REST API data?**</p>
+<p>**A:**</p>
+<pre><code>
+import requests
+response = requests.get("https://api.example.com/data")
+df = spark.createDataFrame(response.json())
+df.write.mode("append").saveAsTable("bronze.api_data")
+</code></pre>
+<br>
+<p>**Q: How do you handle Kafka streaming?**</p>
+<p>**A:**</p>
+<pre><code>
+(spark.readStream
+  .format("kafka")
+  .option("kafka.bootstrap.servers", "...")
+  .option("subscribe", "events")
+  .load()
+  .writeStream.table("bronze.kafka_events"))
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 17: ML_SERVING (Real-Time Inference)</h3>
+<br>
+<p>**Q: How do you deploy ML models for real-time inference?**</p>
+<p>**A:** Use Model Serving endpoints:</p>
+<pre><code>
+# Create endpoint
+from databricks import mlflow
+mlflow.deployments.create(
+    name="churn_model",
+    model_uri="models:/churn_model/champion"
+)
+
+# Invoke
+response = requests.post(
+    "https://<workspace>.cloud.databricks.com/serving-endpoints/churn_model/invocations",
+    json={"dataframe_records": [{"age": 35, "spend": 1000}]}
+)
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 18: RAG_PIPELINE (Vector Search)</h3>
+<br>
+<p>**Q: Explain RAG architecture.**</p>
+<p>**A:** Retrieval-Augmented Generation:</p>
+<p>1. **Index:** Embed documents into vector database</p>
+<p>2. **Retrieve:** Find relevant docs using similarity search</p>
+<p>3. **Generate:** Pass docs + query to LLM for answer</p>
+<br>
+<p>**Q: How do you build Vector Search on Databricks?**</p>
+<p>**A:**</p>
+<pre><code>
+# Create index
+from databricks.vector_search import VectorSearchClient
+client = VectorSearchClient()
+client.create_index(
+    name="docs_index",
+    endpoint="vector_search",
+    source_table="bronze.documents",
+    embedding_source_column="text",
+    columns=["doc_id", "text"]
+)
+
+# Search
+results = client.search(
+    index_name="docs_index",
+    query="What is Delta Lake?",
+    limit=5
+)
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 19: AI_AGENTS (Multi-Agent Orchestration)</h3>
+<br>
+<p>**Q: What are AI agents?**</p>
+<p>**A:** LLMs with tool-calling abilities:</p>
+<p>- Agent decides which tools to call</p>
+<p>- Tools execute actions (database queries, API calls)</p>
+<p>- Agent synthesizes results into answer</p>
+<br>
+<p>**Q: How do you implement agents on Databricks?**</p>
+<p>**A:** Use LangChain + AI Gateway:</p>
+<pre><code>
+from langchain import agents
+tools = [SQLTool(), APItool()]
+agent = agents.initialize_agent(tools, llm)
+agent.run("What were sales in Q1?")
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 20: LAKEBASE_OLTP (Transactional NoSQL)</h3>
+<br>
+<p>**Q: What is Lakebase?**</p>
+<p>**A:** Postgres-compatible transactional database on Databricks:</p>
+<p>- ACID transactions</p>
+<p>- Low-latency queries (sub-100ms)</p>
+<p>- Use for: Session state, operational dashboards, real-time writes</p>
+<br>
+<p>**Q: When to use Lakebase vs Delta Lake?**</p>
+<p>**A:**</p>
+<p>- **Lakebase:** OLTP (transactions, low latency, small reads/writes)</p>
+<p>- **Delta Lake:** OLAP (analytics, large scans, batch writes)</p>
+<br>
+<p>---</p>
+<br>
+<h3>Module 21: DATABRICKS_APPS (Streamlit, FastAPI)</h3>
+<br>
+<p>**Q: How do you deploy Streamlit apps on Databricks?**</p>
+<p>**A:**</p>
+<pre><code>
+# app.py
+import streamlit as st
+st.title("Sales Dashboard")
+df = spark.table("gold.sales_summary").toPandas()
+st.line_chart(df)
+
+# Deploy
+databricks apps deploy --name sales_dashboard
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 22: AI_GATEWAY (LLM Proxy, Guardrails)</h3>
+<br>
+<p>**Q: What is AI Gateway?**</p>
+<p>**A:** LLM proxy layer for:</p>
+<p>- Rate limiting</p>
+<p>- Cost tracking</p>
+<p>- Guardrails (PII detection, content filtering)</p>
+<p>- Fallback routing (OpenAI → Azure OpenAI)</p>
+<p>- Observability (latency, tokens, errors)</p>
+<br>
+<p>**Q: How do you implement cost tracking?**</p>
+<p>**A:**</p>
+<pre><code>
+from databricks.ai_gateway import Gateway
+gateway = Gateway(
+    routes=[{
+        "name": "openai_gpt4",
+        "model": "gpt-4",
+        "cost_per_1k_tokens": 0.03
+    }]
+)
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Module 23: LAKEVIEW_GENIE (Dashboards, Conversational Analytics)</h3>
+<br>
+<p>**Q: What is Genie?**</p>
+<p>**A:** Natural language interface to data:</p>
+<p>- User asks "What were sales last month?"</p>
+<p>- Genie generates SQL, executes, returns answer</p>
+<p>- No SQL knowledge required</p>
+<br>
+<p>**Q: How do you create a Genie Space?**</p>
+<p>**A:**</p>
+<pre><code>
+from databricks import genie
+space = genie.create_space(
+    name="Retail Analytics",
+    tables=["gold.sales_summary", "gold.customer_360"],
+    instructions="Focus on revenue metrics."
+)
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 2: SYSTEM DESIGN SCENARIOS</h2>
+<br>
+<h3>Scenario 1: Design a Real-Time Dashboard</h3>
+<br>
+<p>**Question:** Design a real-time sales dashboard showing revenue by region, updated every 5 seconds.</p>
+<br>
+<p>**Answer:**</p>
+<p>1. **Ingestion:** Kafka → Bronze (streaming)</p>
+<p>2. **Transformation:** Bronze → Silver (cleansing) → Gold (aggregations)</p>
+<p>3. **Aggregation:** Streaming aggregation on 5-second tumbling window</p>
+<p>4. **Storage:** Materialized view in Gold layer</p>
+<p>5. **Visualization:** Lakeview dashboard queries materialized view</p>
+<p>6. **Considerations:**</p>
+<p>   - Watermarking for late data</p>
+<p>   - Checkpoint for fault tolerance</p>
+<p>   - Z-ORDER on region for fast filters</p>
+<br>
+<p>---</p>
+<br>
+<h3>Scenario 2: Design a Multi-Tenant Data Platform</h3>
+<br>
+<p>**Question:** Design a SaaS platform where each customer gets isolated data, but shares infrastructure.</p>
+<br>
+<p>**Answer:**</p>
+<p>1. **Isolation:** Unity Catalog per tenant (tenant_A.retail, tenant_B.retail)</p>
+<p>2. **Compute:** Shared clusters (cost-efficient) with row-level security</p>
+<p>3. **Jobs:** Parameterized notebooks (pass tenant_id)</p>
+<p>4. **Billing:** Track compute usage per tenant (system.billing.usage)</p>
+<p>5. **Considerations:**</p>
+<p>   - Data residency (some tenants need specific regions)</p>
+<p>   - SLA guarantees (priority queues)</p>
+<p>   - Schema evolution (handle different versions)</p>
+<br>
+<p>---</p>
+<br>
+<h3>Scenario 3: Handle Late-Arriving Data</h3>
+<br>
+<p>**Question:** You have a daily batch job. Some records arrive 3 days late. How do you handle it?</p>
+<br>
+<p>**Answer:**</p>
+<p>1. **Watermark:** Allow 3-day grace period</p>
+<p>2. **Reprocessing:**</p>
+<p>   - Streaming: Watermark handles automatically</p>
+<p>   - Batch: Reprocess last 3 days on each run</p>
+<p>3. **Gold Layer:** Use SCD Type 2 to track corrections</p>
+<p>4. **Monitoring:** Alert if late arrivals exceed threshold</p>
+<p>5. **Considerations:**</p>
+<p>   - Trade-off: Latency vs completeness</p>
+<p>   - Cost: Reprocessing 3 days daily is expensive</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 3: BEHAVIORAL INTERVIEW QUESTIONS</h2>
+<br>
+<h3>Tell me about yourself</h3>
+<br>
+<p>**Framework:**</p>
+<p>"I'm a data engineer with expertise in building production pipelines on Databricks. I recently completed BharatMartDBX, where I built an end-to-end data platform covering bronze/silver/gold layers, streaming pipelines, ML model serving, and RAG pipelines. I've processed over 1.1 million records, implemented SCD Type 2 patterns, and deployed real-time dashboards. I'm passionate about data quality and scalable architecture."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Describe a challenging project</h3>
+<br>
+<p>**STAR Method:**</p>
+<p>- **Situation:** Building a streaming pipeline with 3-day late-arriving data</p>
+<p>- **Task:** Ensure 100% data completeness without reprocessing entire history</p>
+<p>- **Action:** Implemented watermarking with 3-day buffer, SCD Type 2 for corrections, monitoring for outliers</p>
+<p>- **Result:** Achieved 99.9% completeness, reduced reprocessing cost by 70%</p>
+<br>
+<p>---</p>
+<br>
+<h3>How do you handle disagreement with team?</h3>
+<br>
+<p>**Answer:**</p>
+<p>"I listen to understand their perspective, share data/evidence for my approach, and focus on shared goals. If we can't agree, I propose an A/B test or proof-of-concept to compare approaches objectively. Example: Teammate wanted batch processing, I advocated for streaming. We ran both for a week, measured latency and cost, and chose streaming based on results."</p>
+<br>
+<p>---</p>
+<br>
+<h3>What's your biggest weakness?</h3>
+<br>
+<p>**Answer:**</p>
+<p>"Early in my career, I focused too much on perfection and missed deadlines. I've learned to balance quality with speed by setting MVPs (minimum viable products), iterating, and using automated testing to catch issues early. Now I ship incrementally and improve based on feedback."</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 4: PORTFOLIO PRESENTATION SCRIPT</h2>
+<br>
+<h3>Opening (30 seconds)</h3>
+<br>
+<p>"I built BharatMartDBX, an end-to-end data engineering platform on Databricks. It's a production-ready system that processes 1.1 million records through bronze/silver/gold layers, with streaming pipelines, ML model serving, and real-time dashboards. Let me walk you through the architecture."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Architecture Overview (1 minute)</h3>
+<br>
+<p>"The platform uses Medallion Architecture:</p>
+<p>- **Bronze:** Raw ingestion using Auto Loader, capturing metadata</p>
+<p>- **Silver:** Data cleansing, deduplication, validation</p>
+<p>- **Gold:** Business marts like Customer 360, RFM analysis, revenue dashboards</p>
+<br>
+<p>I implemented SCD Type 2 for historical tracking, streaming CDC from source databases, and real-time aggregations for dashboards. All code is production-ready with error handling, logging, and retry logic."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Technical Deep Dive (2 minutes)</h3>
+<br>
+<p>**Pick ONE module to showcase:**</p>
+<br>
+<p>"Let me show you the streaming pipeline (Module 04):</p>
+<p>- Auto Loader ingests new files from cloud storage</p>
+<p>- Schema inference handles evolving schemas</p>
+<p>- Checkpoint management ensures exactly-once processing</p>
+<p>- CDC logic applies INSERT/UPDATE/DELETE from MySQL to Delta Lake</p>
+<p>- Watermarking handles late-arriving data up to 3 days</p>
+<br>
+<p>This powers real-time dashboards updated every 5 seconds."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Business Impact (30 seconds)</h3>
+<br>
+<p>"This platform enables:</p>
+<p>- Real-time revenue tracking (updated every 5 seconds)</p>
+<p>- Customer segmentation for targeted marketing</p>
+<p>- Predictive analytics for churn prevention</p>
+<p>- 100% data quality with validation gates</p>
+<br>
+<p>Deployed using Databricks Asset Bundles with CI/CD automation."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Closing (30 seconds)</h3>
+<br>
+<p>"The full codebase is on GitHub (link), with 175+ files, 97% Databricks platform coverage, and comprehensive documentation. I'm excited to bring these skills to [company] and build scalable data platforms."</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 5: RESUME OPTIMIZATION</h2>
+<br>
+<h3>Experience Section Template</h3>
+<br>
+<pre><code>
+DATA ENGINEER (Self-Directed Project)
+BharatMartDBX Data Platform | June 2026
+
+- Built production-ready data engineering platform on Databricks processing 1.1M records
+- Implemented Medallion Architecture (bronze/silver/gold) with streaming pipelines and SCD Type 2 patterns
+- Developed real-time dashboards using Lakeview with <5 second latency
+- Deployed ML model serving endpoints for churn prediction (92% accuracy)
+- Built RAG pipeline with Vector Search (10M embeddings) for document Q&A
+- Orchestrated multi-stage pipelines using Databricks Asset Bundles and CI/CD automation
+- Technologies: Databricks, Delta Lake, Spark, Python, SQL, MLflow, Unity Catalog, dbt
+</code></pre>
+<br>
+<p>---</p>
+<br>
+<h3>Skills Section Template</h3>
+<br>
+<p>**Technical Skills:**</p>
+<p>- **Data Engineering:** Databricks, Delta Lake, Spark (PySpark, Spark SQL), Unity Catalog</p>
+<p>- **Languages:** Python, SQL, Scala (basic)</p>
+<p>- **ML/AI:** MLflow, Model Serving, Vector Search, RAG, LangChain</p>
+<p>- **Orchestration:** Databricks Jobs, Databricks Asset Bundles, Airflow</p>
+<p>- **Tools:** dbt, Git, Docker, Kafka, REST APIs</p>
+<p>- **Architecture:** Medallion (bronze/silver/gold), SCD Type 2, Star Schema, Streaming CDC</p>
+<br>
+<p>---</p>
+<br>
+<h3>Projects Section Template</h3>
+<br>
+<p>**BharatMartDBX Data Engineering Platform**</p>
+<p>- End-to-end data platform on Databricks (24 modules, 175+ files)</p>
+<p>- Streaming pipelines with Auto Loader and CDC (real-time data ingestion)</p>
+<p>- ML pipeline with experiment tracking, model versioning, and real-time serving</p>
+<p>- RAG pipeline with Vector Search for conversational analytics</p>
+<p>- Deployed with CI/CD using Databricks Asset Bundles</p>
+<p>- [GitHub Link] | [Demo Video] | [Live Dashboard]</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 6: LINKEDIN STRATEGY</h2>
+<br>
+<h3>Profile Headline</h3>
+<br>
+<p>**Option 1 (Junior):**</p>
+<p>"Data Engineer | Databricks & Spark | Building Production Data Pipelines"</p>
+<br>
+<p>**Option 2 (Mid):**</p>
+<p>"Data Engineer | Databricks Specialist | ML/AI | Real-Time Analytics"</p>
+<br>
+<p>**Option 3 (Senior):**</p>
+<p>"Senior Data Engineer | Databricks Platform Expert | ML/AI | Building Scalable Data Systems"</p>
+<br>
+<p>---</p>
+<br>
+<h3>About Section</h3>
+<br>
+<p>"I'm a data engineer specializing in Databricks, building production-grade data platforms that turn raw data into actionable insights.</p>
+<br>
+<p>I recently built BharatMartDBX, an end-to-end data engineering platform featuring:</p>
+<p>- Streaming pipelines with Auto Loader and CDC</p>
+<p>- Medallion architecture (bronze/silver/gold)</p>
+<p>- ML model serving with real-time inference</p>
+<p>- RAG pipeline with Vector Search for document Q&A</p>
+<p>- Real-time dashboards with <5 second latency</p>
+<br>
+<p>Technical stack: Databricks, Delta Lake, Spark, Python, SQL, MLflow, Unity Catalog, dbt</p>
+<br>
+<p>I'm passionate about data quality, scalable architecture, and enabling data-driven decision making.</p>
+<br>
+<p>Let's connect if you're building data platforms or looking for data engineering talent."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Featured Portfolio Post (Pin This)</h3>
+<br>
+<p>**Title:** Built an End-to-End Data Engineering Platform on Databricks</p>
+<br>
+<p>**Body:**</p>
+<p>I'm excited to share BharatMartDBX, a production-ready data engineering platform I built on Databricks.</p>
+<br>
+<p>**Architecture:**</p>
+<p>- Bronze/Silver/Gold layers (Medallion Architecture)</p>
+<p>- Streaming pipelines with Auto Loader and CDC</p>
+<p>- SCD Type 2 for historical tracking</p>
+<p>- Real-time dashboards with <5 second latency</p>
+<br>
+<p>**Advanced Features:**</p>
+<p>- ML model serving (churn prediction, 92% accuracy)</p>
+<p>- RAG pipeline with Vector Search (10M embeddings)</p>
+<p>- AI agents with tool-calling capabilities</p>
+<p>- Deployed with CI/CD using Databricks Asset Bundles</p>
+<br>
+<p>**Tech Stack:**</p>
+<p>Databricks, Delta Lake, Spark, Python, SQL, MLflow, Unity Catalog, dbt, Vector Search, LangChain</p>
+<br>
+<p>**Results:**</p>
+<p>- Processed 1.1M records with 100% data quality</p>
+<p>- 97% Databricks platform coverage</p>
+<p>- Production-ready code (error handling, logging, retry logic)</p>
+<br>
+<p>GitHub: [link]</p>
+<p>Demo: [video link]</p>
+<br>
+<p>#Databricks #DataEngineering #MachineLearning #AI #RealTimeAnalytics</p>
+<br>
+<p>[Attach: Architecture diagram screenshot]</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 7: SALARY NEGOTIATION</h2>
+<br>
+<h3>Know Your Worth</h3>
+<br>
+<p>**4-Month Track Graduates:**</p>
+<p>- Entry range: ₹10-12 LPA</p>
+<p>- With strong portfolio: ₹12-15 LPA</p>
+<p>- Negotiation leverage: Production-ready portfolio</p>
+<br>
+<p>**9-Month Track Graduates:**</p>
+<p>- Target: ₹20 LPA</p>
+<p>- With PAID features (RAG, Vector Search): ₹18-22 LPA</p>
+<p>- Negotiation leverage: Advanced AI/ML skills</p>
+<br>
+<p>---</p>
+<br>
+<h3>Negotiation Script</h3>
+<br>
+<p>**When asked "What are your salary expectations?"**</p>
+<br>
+<p>"Based on my skills and the value I bring, I'm targeting ₹[X] LPA. I've built production data pipelines on Databricks, including streaming CDC, ML model serving, and RAG pipelines. My portfolio demonstrates I can deliver from day one. I'm flexible on the exact number if the role offers strong growth opportunities, but ₹[X] reflects my market value for a [Junior/Mid/Senior] Data Engineer role."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Negotiation Tactics</h3>
+<br>
+<p>**Anchor High:**</p>
+<p>If targeting ₹20 LPA, start at ₹22 LPA. Employer will negotiate down.</p>
+<br>
+<p>**Bundle:**</p>
+<p>"If ₹20 LPA base isn't possible, can we discuss performance bonuses, stock options, or remote work flexibility?"</p>
+<br>
+<p>**Walk Away Power:**</p>
+<p>If offer is ₹15 LPA but you want ₹20 LPA: "I appreciate the offer, but based on my skills and market rates, I'm looking for ₹20 LPA. Can we revisit this?"</p>
+<br>
+<p>**Never Accept First Offer:**</p>
+<p>Always negotiate. Even if fair, asking shows confidence.</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 8: COMMON INTERVIEW MISTAKES</h2>
+<br>
+<h3>Technical Mistakes</h3>
+<br>
+<p>**Mistake 1:** Over-explaining basics, under-explaining complex parts</p>
+<p>**Fix:** Assume interviewer knows basics (e.g., "Delta Lake is an open-source storage layer..."). Spend time on YOUR implementation details.</p>
+<br>
+<p>**Mistake 2:** Not quantifying impact</p>
+<p>**Fix:** Always include numbers - "Processed 1.1M records", "Reduced latency by 70%", "Deployed to 50+ users"</p>
+<br>
+<p>**Mistake 3:** Can't explain trade-offs</p>
+<p>**Fix:** Every design decision has trade-offs. "I chose streaming over batch because latency mattered more than cost in this use case."</p>
+<br>
+<p>---</p>
+<br>
+<h3>Behavioral Mistakes</h3>
+<br>
+<p>**Mistake 1:** Blaming others for failures</p>
+<p>**Fix:** Own your mistakes. "I should have validated assumptions earlier. I learned to..."</p>
+<br>
+<p>**Mistake 2:** Vague answers</p>
+<p>**Fix:** Use STAR method (Situation, Task, Action, Result) with specific examples.</p>
+<br>
+<p>**Mistake 3:** Not asking questions</p>
+<p>**Fix:** Prepare 3-5 questions about the role, team, tech stack.</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 9: FINAL CHECKLIST</h2>
+<br>
+<p>Before your interview:</p>
+<br>
+<p>**Technical Prep:**</p>
+<p>- [ ] Reviewed all 24 module questions (this guide)</p>
+<p>- [ ] Can explain BharatMartDBX architecture in 2 minutes</p>
+<p>- [ ] Practiced live coding (write SCD Type 2 merge from scratch)</p>
+<p>- [ ] Reviewed Spark UI, debugging techniques</p>
+<br>
+<p>**Portfolio Prep:**</p>
+<p>- [ ] GitHub repo is public, README is polished</p>
+<p>- [ ] Demo video recorded (5 minutes)</p>
+<p>- [ ] Can navigate to any module and explain code</p>
+<br>
+<p>**Behavioral Prep:**</p>
+<p>- [ ] Prepared STAR stories (3-5 examples)</p>
+<p>- [ ] Practiced "tell me about yourself" (30 seconds)</p>
+<p>- [ ] Prepared questions to ask interviewer (3-5)</p>
+<br>
+<p>**Logistics:**</p>
+<p>- [ ] Resume updated (BharatMartDBX experience added)</p>
+<p>- [ ] LinkedIn polished (portfolio post pinned)</p>
+<p>- [ ] Mock interview completed (peer or self)</p>
+<p>- [ ] Dress code confirmed, quiet space ready</p>
+<br>
+<p>---</p>
+<br>
+<h2>SECTION 10: POST-INTERVIEW FOLLOW-UP</h2>
+<br>
+<h3>Thank You Email Template</h3>
+<br>
+<p>**Subject:** Thank you - [Your Name] - Data Engineer Interview</p>
+<br>
+<p>**Body:**</p>
+<p>Dear [Interviewer Name],</p>
+<br>
+<p>Thank you for taking the time to speak with me today about the Data Engineer role at [Company].</p>
+<br>
+<p>I enjoyed learning about [specific project/challenge discussed], and I'm excited about the opportunity to contribute to [specific team goal].</p>
+<br>
+<p>Our discussion about [technical topic] reinforced my interest in the role. I'm particularly drawn to [company's approach to data/specific tech stack], and I believe my experience building production data pipelines on Databricks aligns well with your needs.</p>
+<br>
+<p>Please let me know if you need any additional information. I look forward to hearing from you.</p>
+<br>
+<p>Best regards,</p>
+<p>[Your Name]</p>
+<br>
+<p>---</p>
+<br>
+<h2>FINAL NOTE</h2>
+<br>
+<p>**You've built something real. You've proven you can deliver. Now go sell it.**</p>
+<br>
+<p>Most candidates talk theory. You show production systems.</p>
+<p>Most candidates have toy projects. You have 175+ files of tested code.</p>
+<p>Most candidates hope. You know.</p>
+<br>
+<p>**Walk into that interview like you already earned the job. Because you did.**</p>
+<br>
+<p>---</p>
+<br>
+<p>**Last Updated:** June 25, 2026</p>
+<p>**Version:** 1.0</p>
+<p>**Owner:** SkillAI Path - BharatMartDBX Program</p>
+<p>**Next Steps:** Practice, practice, practice. Then land that ₹20 LPA offer.</p>
+<br>
+    </div>
+
+    <div class="section" id="section-2">
+        <h1>Behavioral technical reference - BharatMartDBX Project</h1>
+<br>
+<h2>Framework: STAR Method</h2>
+<p>* **Situation:** Context and background</p>
+<p>* **Task:** Your responsibility/goal</p>
+<p>* **Action:** Specific steps you took</p>
+<p>* **Result:** Measurable outcome + learning</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 1: "Tell me about yourself"</h2>
+<br>
+<p>**Answer (60 seconds):**</p>
+<br>
+<p>"I'm a data engineer with a strong foundation in distributed systems and analytics pipelines. Most recently, I built BharatMartDBX - a production-grade retail analytics pipeline on Databricks processing 50K records per hour.</p>
+<br>
+<p>The project demonstrates my end-to-end capabilities: I designed Medallion architecture with streaming ingestion via Auto Loader, implemented SCD Type 2 for historical tracking across 8 dimensions, and optimized query performance by 80% using ZORDER and pre-aggregation.</p>
+<br>
+<p>What excites me about data engineering is solving the puzzle of making data reliable, fast, and actionable. In BharatMartDBX, I didn't just move data - I built a system that answers business questions like 'Which customers are at churn risk?' in under 3 seconds.</p>
+<br>
+<p>I'm looking for a role where I can apply these skills at scale - ideally working with streaming data, Delta Lake, and cross-functional teams turning data into business value."</p>
+<br>
+<p>**Key elements:**</p>
+<p>* Technical summary (architecture, tools)</p>
+<p>* Specific results (50K records/hour, 80% speedup)</p>
+<p>* Passion statement (puzzle-solving)</p>
+<p>* Forward-looking (what you want next)</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 2: "Describe a technical challenge you faced"</h2>
+<br>
+<p>**STAR Response:**</p>
+<br>
+<p>**Situation:**</p>
+<p>"In BharatMartDBX, I initially implemented SCD Type 1 (overwrite) for supplier dimension to keep it simple."</p>
+<br>
+<p>**Task:**</p>
+<p>"Three weeks in, the business team asked: 'Did supplier X's delivery performance drop after they moved warehouses?' I couldn't answer because I had overwritten the old address."</p>
+<br>
+<p>**Action:**</p>
+<p>"I refactored to SCD Type 2. This required:</p>
+<p>1. Adding surrogate keys (supplier_key) separate from natural keys (supplier_id)</p>
+<p>2. Implementing merge logic to detect changes and create new versions</p>
+<p>3. Adding effective_date, end_date, and is_current columns</p>
+<p>4. Updating all downstream fact tables to join on surrogate keys</p>
+<p>5. Backfilling history from Bronze layer audit logs"</p>
+<br>
+<p>**Result:**</p>
+<p>"The refactor took 2 days but unlocked historical analysis. We discovered that Supplier X's on-time delivery dropped from 92% to 78% after their warehouse move - directly answering the business question. This became my 'design for questions not yet asked' principle."</p>
+<br>
+<p>**Follow-up readiness:**</p>
+<p>* Be ready to show code (merge logic notebook)</p>
+<p>* Explain trade-offs (30% storage increase for 100% analytical flexibility)</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 3: "Tell me about a time you optimized something"</h2>
+<br>
+<p>**STAR Response:**</p>
+<br>
+<p>**Situation:**</p>
+<p>"BharatMartDBX's executive dashboard was taking 30+ seconds to load. The business team was refreshing it hourly, so this was a pain point."</p>
+<br>
+<p>**Task:**</p>
+<p>"I was asked to get query time under 5 seconds without changing the dashboard design."</p>
+<br>
+<p>**Action:**</p>
+<p>"I took a three-pronged approach:</p>
+<p>1. **ZORDER** - Applied ZORDER BY (customer_key, product_key) on fact_sales. This colocates related records, reducing file scan from 500 files to 60 files.</p>
+<p>2. **Pre-aggregation** - Created Gold layer marts (mart_customer_360, mart_product_performance) that pre-compute daily aggregates. Queries now hit 50K rows instead of 5M.</p>
+<p>3. **Compute statistics** - Ran ANALYZE TABLE after every write so Catalyst optimizer makes smarter join decisions."</p>
+<br>
+<p>**Result:**</p>
+<p>"Dashboard queries dropped from 30s to 3s (90% improvement). Trade-off was 30% storage increase for Gold layer, but at our data scale that's 500MB - well worth the user experience gain. The business team started using the dashboard in morning standups because it was finally responsive."</p>
+<br>
+<p>**Key metric:** 90% improvement (specific percentage)</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 4: "Describe a time you worked under pressure"</h2>
+<br>
+<p>**STAR Response:**</p>
+<br>
+<p>**Situation:**</p>
+<p>"Two days before my BharatMartDBX demo, I discovered my SCD Type 2 merge logic was creating duplicate records. The Gold layer had 120K records instead of the expected 50K."</p>
+<br>
+<p>**Task:**</p>
+<p>"I had to debug the issue, fix the merge logic, reprocess Silver and Gold layers, and validate correctness - all while keeping my demo timeline."</p>
+<br>
+<p>**Action:**</p>
+<p>"I took a systematic approach:</p>
+<p>1. **Isolate the bug** - Queried for is_current = TRUE and found multiple current records per customer. The WHERE clause in my merge was wrong.</p>
+<p>2. **Fix the logic** - Changed from WHERE is_current = TRUE to WHERE is_current = TRUE AND end_date = '9999-12-31' to properly close old versions.</p>
+<p>3. **Reprocess safely** - Dropped Silver tables, reran from Bronze (because Bronze is immutable, I could replay).</p>
+<p>4. **Validate** - Wrote data quality test: assert COUNT(*) WHERE is_current = TRUE = COUNT(DISTINCT customer_id). Passed.</p>
+<p>5. **Document** - Added this to utils/data_quality_tests.ipynb so future me doesn't repeat it."</p>
+<br>
+<p>**Result:**</p>
+<p>"Fixed in 6 hours. Demo went smoothly. The pressure taught me: (1) Write tests early, (2) Bronze as immutable audit trail saves you, (3) WHERE clause edge cases matter."</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 5: "How do you handle ambiguous requirements?"</h2>
+<br>
+<p>**STAR Response:**</p>
+<br>
+<p>**Situation:**</p>
+<p>"When designing the Gold layer, BharatMartDBX Developers said 'We need a customer view.' That could mean 100 different things."</p>
+<br>
+<p>**Task:**</p>
+<p>"I needed to clarify requirements without endless back-and-forth."</p>
+<br>
+<p>**Action:**</p>
+<p>"I used a three-question framework:</p>
+<p>1. **Who's the user?** → Operations team, not executives</p>
+<p>2. **What decision does it support?** → Identify churn risk for proactive outreach</p>
+<p>3. **What's the success metric?** → Query returns <100 at-risk customers daily</p>
+<br>
+<p>Based on answers, I proposed mart_customer_360 with:</p>
+<p>* Total purchases, avg order value</p>
+<p>* Days since last purchase</p>
+<p>* Segment classification (New/Returning/VIP)</p>
+<p>* Activity status (Active/At Risk/Churned)</p>
+<br>
+<p>I mocked it up in a notebook, showed them sample data, iterated once based on feedback."</p>
+<br>
+<p>**Result:**</p>
+<p>"They approved the design in one meeting. The mart now powers their daily outreach workflow. Lesson: Mock early, validate with data, avoid building the wrong thing."</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 6: "Tell me about a time you learned something new quickly"</h2>
+<br>
+<p>**STAR Response:**</p>
+<br>
+<p>**Situation:**</p>
+<p>"I had PySpark experience but had never used dbt. My mentor suggested integrating it for transformation testing in Month 3 of BharatMartDBX."</p>
+<br>
+<p>**Task:**</p>
+<p>"Learn dbt and integrate it into existing pipeline in 1 week."</p>
+<br>
+<p>**Action:**</p>
+<p>"I used focused learning:</p>
+<p>1. **Docs first** - Read dbt Databricks quickstart (2 hours)</p>
+<p>2. **Tutorial second** - Built Jaffle Shop example (3 hours)</p>
+<p>3. **Apply immediately** - Converted mart_customer_360 notebook to dbt model (1 day)</p>
+<p>4. **Test-driven** - Added unique, not_null, relationships tests (1 day)</p>
+<p>5. **Document** - Wrote 06_DBT/README.md comparing manual vs dbt approach"</p>
+<br>
+<p>**Result:**</p>
+<p>"Within 5 days, I had 3 Gold marts running via dbt with automated testing. The tests caught a NULL propagation bug I missed in manual review. Lesson: Tutorial → Apply → Document is my new learning loop."</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 7: "Why do you want to work here?"</h2>
+<br>
+<p>**Framework:**</p>
+<p>1. **Company-specific research** (what they do)</p>
+<p>2. **Connect to your skills** (BharatMartDBX relevance)</p>
+<p>3. **Growth opportunity** (what you'll learn)</p>
+<br>
+<p>**Example (for Databricks-using company):**</p>
+<br>
+<p>"I'm excited about [Company] for three reasons:</p>
+<br>
+<p>First, your data platform powers [specific use case from company blog/news]. I saw you process [X] scale of data daily. In BharatMartDBX, I worked at 50K records/hour - I'm eager to apply my Medallion architecture experience at [Company's scale].</p>
+<br>
+<p>Second, I admire your [specific technical choice, e.g., 'adoption of Delta Lake for GDPR compliance']. I've built SCD Type 2 patterns and time travel recovery - I'd love to see how you handle compliance + performance at scale.</p>
+<br>
+<p>Third, I want to learn from teams solving [specific challenge, e.g., 'real-time fraud detection']. My BharatMartDBX project was batch-heavy with some streaming. I want to level up to sub-second latencies with streaming-first architecture.</p>
+<br>
+<p>I see this as: You need someone who knows Databricks + Delta Lake. I need to grow from batch pipelines to streaming at scale. Perfect mutual fit."</p>
+<br>
+<p>**Key:** Show you researched them, connect to BharatMartDBX, show hunger to learn.</p>
+<br>
+<p>---</p>
+<br>
+<h2>Question 8: "Do you have any questions for us?"</h2>
+<br>
+<p>**Strong Questions:**</p>
+<br>
+<p>**Technical:**</p>
+<p>* "Can you walk me through your data architecture? Do you use Medallion, Lambda, Kappa?"</p>
+<p>* "What's your SLA for data freshness? Real-time or batch?"</p>
+<p>* "How do you handle schema evolution in production?"</p>
+<br>
+<p>**Team/Culture:**</p>
+<p>* "What does a typical sprint look like for the data eng team?"</p>
+<p>* "How much collaboration is there between data eng and analytics teams?"</p>
+<p>* "What's the review process for merging data pipeline changes?"</p>
+<br>
+<p>**Growth:**</p>
+<p>* "What's one skill I should focus on in my first 90 days here?"</p>
+<p>* "Are there opportunities to learn [specific tech, e.g., Kafka] on the job?"</p>
+<p>* "How do you support continuous learning for the team?"</p>
+<br>
+<p>**Red flags to check:**</p>
+<p>* "What's your on-call rotation like?" (Work-life balance)</p>
+<p>* "How do you measure success for this role?" (Clear expectations)</p>
+<br>
+<p>---</p>
+<br>
+<h2>Common Behavioral Questions - Quick Prep</h2>
+<br>
+<p>| Question | BharatMartDBX Hook |</p>
+<p>|----------|-----------------|</p>
+<p>| Time you failed | "Deployed buggy Gold mart, learned to add dbt tests" |</p>
+<p>| Conflict with teammate | N/A (solo project) - pivot to "...worked with mentor feedback" |</p>
+<p>| Tight deadline | "2 days to fix SCD merge bug before demo" |</p>
+<p>| Innovative solution | "Watermark manager for idempotency" |</p>
+<p>| Leadership | "Documented decision log for future team members" |</p>
+<p>| Feedback received | "Mentor said 'Test transformations' → adopted dbt" |</p>
+<br>
+<p>---</p>
+<br>
+<h2>Body Language Tips</h2>
+<br>
+<p>* **Eye contact:** 70% of the time (not staring contest)</p>
+<p>* **Posture:** Lean slightly forward (engagement)</p>
+<p>* **Hands:** Use for emphasis, don't fidget</p>
+<p>* **Smile:** At greeting and when discussing results</p>
+<p>* **Pace:** Speak 20% slower than normal (enthusiasm = fast talking)</p>
+<br>
+<p>---</p>
+<br>
+<h2>Pre-Interview Checklist</h2>
+<br>
+<p>- [ ] Laptop charged + backup device ready</p>
+<p>- [ ] BharatMartDBX GitHub open in browser tab</p>
+<p>- [ ] Architecture diagram visible</p>
+<p>- [ ] Notebook samples ready to screen-share</p>
+<p>- [ ] Printed notes with STAR stories</p>
+<p>- [ ] Questions for them prepared</p>
+<p>- [ ] Water nearby</p>
+<p>- [ ] 5 minutes early (not 20 early)</p>
+<br>
+<p>**Remember:** They want you to succeed. They scheduled this interview because your BharatMartDBX project impressed them. Be confident!</p>
+<br>
+    </div>
+
+    <a href="#toc" class="back-to-top">↑ Back to Top</a>
+</body>
+</html>
