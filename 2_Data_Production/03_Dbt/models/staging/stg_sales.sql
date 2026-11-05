@@ -12,6 +12,7 @@
 
 SELECT
   OrderID,
+  CustomerID, -- added PhaseC2: business key for the CDC-owned dim_customer ID join
   CustomerName,
   ProductName,
   ProductCategory,

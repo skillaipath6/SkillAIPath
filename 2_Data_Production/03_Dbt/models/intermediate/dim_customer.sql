@@ -34,6 +34,21 @@ customer_first_last AS (
     MAX(OrderDate) AS EndDate
   FROM customer_base
   GROUP BY CustomerID, CustomerName, CustomerMail, CustomerAge, CustomerGender, CustomerContact, CustomerAddress
+),
+
+customer_dedup AS (
+  SELECT
+    CustomerID,
+    CustomerName,
+    CustomerMail,
+    CustomerAge,
+    CustomerGender,
+    CustomerContact,
+    CustomerAddress,
+    StartDate,
+    EndDate,
+    ROW_NUMBER() OVER (PARTITION BY CustomerName ORDER BY EndDate DESC, CustomerID) AS rn
+  FROM customer_first_last
 )
 
 SELECT
@@ -49,4 +64,5 @@ SELECT
   EndDate,
   1 AS IsCurrent,
   CURRENT_TIMESTAMP() AS LoadedAt
-FROM customer_first_last
+FROM customer_dedup
+WHERE rn = 1

@@ -85,7 +85,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,configuration
-# MAGIC %run ../../../1_Canvas/1_Setup/1_config
+# MAGIC %run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 
@@ -230,8 +230,22 @@ except Exception:
 # DBTITLE 1,Read Incremental Changes from Bronze
 # Read only new/changed records since last watermark
 # Use stg_sales_incremental (daily delta landing zone) for efficient incremental processing
+# >>> GUARD (Phase P1, 2026-11-03): forward-only batch filter <<<
+# Jobs 07/24 generators re-write the SAME BatchDate staging rows (different random
+# data) AFTER Job 05 already processed them. The LoadedAt watermark alone lets those
+# stale rows through and they UPDATE-overwrite valid history in silver.fact_sales
+# (proven Nov 3: Nov-2 fact rows were silently replaced by the job-07 regen).
+# Only process batches strictly NEWER than the newest batch already in fact_sales.
+max_fact_batch = spark.sql(
+    f"SELECT COALESCE(MAX(BatchDate), DATE'1900-01-01') AS b FROM {Config.TBL_FACT_SALES}"
+).collect()[0]['b']
+stale_staging_rows = spark.sql(
+    f"SELECT COUNT(*) c FROM {Config.CATALOG}.{Config.SCHEMA_BRONZE}.stg_sales_incremental WHERE BatchDate <= DATE'{max_fact_batch}'"
+).collect()[0]['c']
+if stale_staging_rows > 0:
+    print(f"SHIELD: skipping {stale_staging_rows:,} staging rows for already-processed batches (BatchDate <= {max_fact_batch}) — regenerated duplicates are NOT merged over valid fact history")
 df_sales_changes = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_BRONZE}.stg_sales_incremental").filter(
-    col('LoadedAt') > last_watermark
+    (col('LoadedAt') > last_watermark) & (col('BatchDate') > max_fact_batch)
 )
 
 record_count = df_sales_changes.count()
@@ -264,12 +278,21 @@ print(f"\ndim_date coverage: {date_range['min_date']} to {date_range['max_date']
 
 # Perform all dimension lookups
 # POINT-IN-TIME SCD2 JOIN: Match customer record that was active on OrderDate
+# >>> Phase P1 fix (2026-11-03): join dim_customer by CustomerID, not CustomerName <<<
+# The CDC-owned dim_customer (06_customer_scd2_cdc, Job 05) keys versions by
+# CustomerID and legitimately contains duplicate CustomerNames — a name join
+# fans out rows / mis-assigns SKs. Point-in-time window picks the version valid
+# at OrderDate (IsCurrent rows accept any OrderDate >= StartDate, which also
+# covers current rows whose EndDate predates the order, e.g. legacy dbt-built rows).
+# NOTE (2026-11-05): comments must sit ABOVE the statement — placing this block
+# between `df_sales_changes \` and `.join(` breaks the line continuation
+# (IndentationError, Nov 4 12:00 UTC run failure).
 df_with_dims = df_sales_changes \
     .join(
         dim_customer,
-        (df_sales_changes.CustomerName == dim_customer.CustomerName) &
+        (df_sales_changes.CustomerID == dim_customer.CustomerID) &
         (df_sales_changes.OrderDate >= dim_customer.StartDate) &
-        (df_sales_changes.OrderDate <= dim_customer.EndDate),
+        ((dim_customer.IsCurrent == 1) | (df_sales_changes.OrderDate <= dim_customer.EndDate)),
         'left'
     ) \
     .join(
@@ -328,6 +351,13 @@ df_with_dims = df_sales_changes \
 # This prevents data loss when new dimension values arrive before dimension loads
 df_fact = df_with_dims.select(
     df_sales_changes.OrderID,
+    # >>> FIX (Phase P1b, 2026-11-05): expose CustomerID <<<
+    # dbt's fact_sales incremental MERGE (schema autoMerge) added a CustomerID column
+    # to sap_dev.silver.fact_sales on 2026-11-03 22:58 (delta v16 ADD COLUMNS). This
+    # notebook's upsert_merge uses `WHEN NOT MATCHED THEN INSERT *`, which requires
+    # the source to carry EVERY target column — without CustomerID the MERGE fails
+    # with DELTA_MERGE_UNRESOLVED_EXPRESSION (Nov 5 09:40 repair-run failure).
+    df_sales_changes.CustomerID,
     coalesce(col('CustomerSK'), lit(-1)).alias('CustomerSK'),
     coalesce(col('ProductSK'), lit(-1)).alias('ProductSK'),
     coalesce(col('WarehouseSK'), lit(-1)).alias('WarehouseSK'),
@@ -450,9 +480,13 @@ else:
 if valid_count > 0:
     # All dimension keys are now properly looked up - using COALESCE for orphan handling
     
-    # Deduplicate by OrderID - keep most recent record based on LoadedAt
+    # Deduplicate by (OrderID, BatchDate) - keep most recent record per grain based on LoadedAt
+    # COMPOSITE KEY FIX (Nov 2): incremental generator OrderIDs restart at 1 every run, so an
+    # OrderID-only dedup/MERGE key would destructively UPDATE historical fact_sales rows from
+    # other BatchDates. Composite grain matches dbt fact_sales unique_key ['OrderID','BatchDate']
+    # and the 5_ArchiveAndCleanup bridge merge key.
     from pyspark.sql.window import Window
-    window_spec = Window.partitionBy('OrderID').orderBy(col('LoadedAt').desc())
+    window_spec = Window.partitionBy('OrderID', 'BatchDate').orderBy(col('LoadedAt').desc())
     df_for_merge = df_final.withColumn('row_num', row_number().over(window_spec)) \
         .filter(col('row_num') == 1) \
         .drop('row_num')
@@ -460,7 +494,7 @@ if valid_count > 0:
     merge_stats = upsert_merge(
         source_df=df_for_merge,
         target_table=Config.TBL_FACT_SALES,
-        merge_keys=['OrderID'],
+        merge_keys=['OrderID', 'BatchDate'],
         batch_date=datetime.now().strftime('%Y-%m-%d')
     )
     

@@ -1,9 +1,0 @@
-# BharatMart - Gold Analytics Dashboard Requirements
-
-streamlit==1.31.0
-databricks-sql-connector==3.0.0
-pandas==2.1.4
-plotly==5.18.0
-numpy==1.26.3
-python-dotenv==1.0.0
-pyarrow==14.0.2

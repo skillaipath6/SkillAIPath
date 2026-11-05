@@ -77,8 +77,13 @@ else:
 import os
 import re
 
-# Auto-detect dbt project directory and environment from path
+# Get environment from job parameter (passed via widgets)
 try:
+    environment_param = dbutils.widgets.get("environment")
+    print(f"✅ Using environment from job parameter: {environment_param}")
+    detected_environment = environment_param
+    
+    # Still need to detect project path
     notebook_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
     project_path = os.path.dirname(notebook_path)
     
@@ -86,28 +91,41 @@ try:
     if not project_path.startswith('/Workspace'):
         project_path = '/Workspace' + project_path
     
-    # Extract environment from path (e.g., /Shared/dev/... → dev)
-    # Pattern: /Shared/{environment}/ or /Users/.../env/{environment}/
-    env_match = re.search(r'/Shared/(dev|uat|prod)/', notebook_path) or \
-                re.search(r'/env/(dev|uat|prod)/', notebook_path)
-    
-    if env_match:
-        detected_environment = env_match.group(1)
-    else:
-        # Default to dev if no environment found in path
-        detected_environment = 'dev'
-        print(f"⚠️ No environment found in path, defaulting to: dev")
-    
     print(f"✅ Auto-detected notebook path: {notebook_path}")
-    print(f"✅ Auto-detected environment: {detected_environment.upper()}")
+    print(f"✅ Final environment: {detected_environment.upper()}")
     
-except Exception as e:
-    # Fallback to hardcoded path and dev environment
-    project_path = '/Workspace/Shared/dev/SkillAIPath/2_Data_Production/03_Dbt'
-    detected_environment = 'dev'
-    print(f"⚠️ Auto-detect failed: {str(e)}")
-    print(f"⚠️ Using fallback path: {project_path}")
-    print(f"⚠️ Using fallback environment: {detected_environment}")
+except:
+    # Fallback to path-based detection
+    try:
+        notebook_path = dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get()
+        project_path = os.path.dirname(notebook_path)
+        
+        # Add /Workspace prefix if not present
+        if not project_path.startswith('/Workspace'):
+            project_path = '/Workspace' + project_path
+        
+        # Extract environment from path (e.g., /Shared/dev/... → dev)
+        # Pattern: /Shared/{environment}/ or /Users/.../env/{environment}/
+        env_match = re.search(r'/Shared/(dev|uat|prod|main)/', notebook_path) or \
+                    re.search(r'/env/(dev|uat|prod|main)/', notebook_path)
+        
+        if env_match:
+            detected_environment = env_match.group(1)
+        else:
+            # Default to dev if no environment found in path
+            detected_environment = 'dev'
+            print(f"⚠️ No environment found in path, defaulting to: dev")
+        
+        print(f"✅ Auto-detected notebook path: {notebook_path}")
+        print(f"✅ Auto-detected environment: {detected_environment.upper()}")
+        
+    except Exception as e:
+        # Fallback to hardcoded path and dev environment
+        project_path = '/Workspace/Shared/dev/SkillAIPath/2_Data_Production/03_Dbt'
+        detected_environment = 'dev'
+        print(f"⚠️ Auto-detect failed: {str(e)}")
+        print(f"⚠️ Using fallback path: {project_path}")
+        print(f"⚠️ Using fallback environment: {detected_environment}")
 
 os.chdir(project_path)
 print(f"✅ Working directory: {os.getcwd()}")
@@ -375,54 +393,96 @@ else:
     except NameError:
         target_env = os.environ.get('DBT_TARGET', 'dev')
     
-    print(f"Running: dbt seed --target {target_env} --profiles-dir .")
-    print("-"*80)
-    print()
+    # Check if seed tables already exist — skip dbt seed to avoid SQL Warehouse cold-start timeout
+    seed_catalog = f"sap_{target_env}"
+    seed_schema = "reference"
+    seed_tables_to_check = ['category_reference', 'state_reference']
+    existing_seed_tables = []
     
-    start_time = datetime.now()
+    for seed_table in seed_tables_to_check:
+        full_seed_table = f"{seed_catalog}.{seed_schema}.{seed_table}"
+        if spark.catalog.tableExists(full_seed_table):
+            existing_seed_tables.append(seed_table)
     
-    try:
-        result = subprocess.run(
-            ['dbt', 'seed', '--target', target_env, '--profiles-dir', '.'],
-            capture_output=True,
-            text=True,
-            cwd=project_path,
-            timeout=600  # 10 minutes
-        )
-        
-        end_time = datetime.now()
-        duration = (end_time - start_time).total_seconds()
-        
-        print(result.stdout)
-        
-        if result.stderr:
-            print("\nSTDERR:")
-            print(result.stderr)
-        
+    if len(existing_seed_tables) == len(seed_tables_to_check):
+        print(f"✅ Seed tables already loaded in {seed_catalog}.{seed_schema}:")
+        for t in existing_seed_tables:
+            count = spark.table(f"{seed_catalog}.{seed_schema}.{t}").count()
+            print(f"   • {t}: {count:,} rows")
         print()
-        print("-"*80)
-        print(f"Execution time: {duration:.1f} seconds")
-        print()
-        
-        if result.returncode == 0:
-            print("✅ SUCCESS: Seed data loaded")
-            print("="*80)
-        else:
-            print(f"⚠️  WARNING: dbt seed had issues (return code: {result.returncode})")
-            print("Proceeding with build...")
-            print("="*80)
-    
-    except subprocess.TimeoutExpired:
-        print("⚠️  TIMEOUT: dbt seed exceeded 10-minute limit")
-        print()
-        print("This typically happens when SQL Warehouse is starting (cold start).")
-        print("Seed data is reference/lookup tables - they can be loaded separately.")
-        print()
-        print("To load seeds manually later, run:")
-        print(f"  dbt seed --target {target_env} --profiles-dir .")
-        print()
-        print("Proceeding with dbt run (models may reference seed tables)...")
+        print("Skipping dbt seed (reference data only needs to be loaded once)...")
         print("="*80)
+    else:
+        missing_seeds = [t for t in seed_tables_to_check if t not in existing_seed_tables]
+        print(f"Seed tables not found: {', '.join(missing_seeds)}")
+        
+        # Pre-warm SQL Warehouse to avoid cold-start timeout on fresh deployments
+        print("\n🔥 Pre-warming SQL Warehouse before dbt seed...")
+        try:
+            from databricks.sdk import WorkspaceClient as _WCL
+            _w = _WCL() if 'w' not in dir() else w
+            warehouse_id = os.environ.get('DATABRICKS_HTTP_PATH', '').split('/')[-1]
+            _w.warehouses.start(warehouse_id)
+            import time
+            for i in range(60):  # Wait up to 5 minutes for warehouse to start
+                wh_state = _w.warehouses.get(warehouse_id)
+                if str(wh_state.state) == 'WarehouseState.RUNNING':
+                    print(f"   ✅ SQL Warehouse is running (waited {i*5}s)")
+                    break
+                time.sleep(5)
+            else:
+                print("   ⚠️  Warehouse still starting after 5 min — proceeding anyway")
+        except Exception as e:
+            print(f"   ⚠️  Pre-warm skipped: {str(e)[:80]}")
+        
+        print(f"\nRunning: dbt seed --target {target_env} --profiles-dir .")
+        print("-"*80)
+        print()
+        
+        start_time = datetime.now()
+        
+        try:
+            result = subprocess.run(
+                ['dbt', 'seed', '--target', target_env, '--profiles-dir', '.'],
+                capture_output=True,
+                text=True,
+                cwd=project_path,
+                timeout=1200  # 20 minutes (allows for SQL Warehouse cold start)
+            )
+        
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+            
+            print(result.stdout)
+            
+            if result.stderr:
+                print("\nSTDERR:")
+                print(result.stderr)
+            
+            print()
+            print("-"*80)
+            print(f"Execution time: {duration:.1f} seconds")
+            print()
+            
+            if result.returncode == 0:
+                print("✅ SUCCESS: Seed data loaded")
+                print("="*80)
+            else:
+                print(f"⚠️  WARNING: dbt seed had issues (return code: {result.returncode})")
+                print("Proceeding with build...")
+                print("="*80)
+        
+        except subprocess.TimeoutExpired:
+            print("⚠️  TIMEOUT: dbt seed exceeded 20-minute limit")
+            print()
+            print("This typically happens when SQL Warehouse is starting (cold start).")
+            print("Seed data is reference/lookup tables - they can be loaded separately.")
+            print()
+            print("To load seeds manually later, run:")
+            print(f"  dbt seed --target {target_env} --profiles-dir .")
+            print()
+            print("Proceeding with dbt run (models may reference seed tables)...")
+            print("="*80)
 
 # COMMAND ----------
 
@@ -503,7 +563,13 @@ print(f"DBT Silver Schema: sap_{target_env}.silver")
 print(f"DBT Gold Schema: sap_{target_env}.gold")
 print()
 
-print(f"Running: dbt run --target {target_env} --profiles-dir .")
+# Check refresh mode from job parameter (default: full)
+try:
+    refresh_mode = dbutils.widgets.get("refresh_mode")
+except:
+    refresh_mode = "full"
+
+print(f"Running: dbt run --target {target_env} --profiles-dir ." + (" --full-refresh" if refresh_mode == "full" else ""))
 print("-"*80)
 print()
 
@@ -514,13 +580,12 @@ print("  • Dimension models (dim_*)")
 print("  • Fact models (fact_*)")
 print("  • Gold Mart models (mart_*)")
 print()
-print("Mode: NORMAL (No --full-refresh)")
+print(f"Mode: {refresh_mode.upper()}")
 print("-"*80)
 print()
 
 start_time = datetime.now()
 
-# Normal dbt execution (no full refresh)
 dbt_command = [
     "dbt",
     "run",
@@ -530,13 +595,25 @@ dbt_command = [
     "."
 ]
 
-result = subprocess.run(
-    dbt_command,
-    capture_output=True,
-    text=True,
-    cwd=project_path,
-    timeout=900  # 15 minutes
-)
+if refresh_mode == "full":
+    dbt_command.append("--full-refresh")
+
+try:
+    result = subprocess.run(
+        dbt_command,
+        capture_output=True,
+        text=True,
+        cwd=project_path,
+        timeout=1800  # 30 minutes — full-refresh needs more time
+    )
+except subprocess.TimeoutExpired as e:
+    print(f"❌ TIMEOUT: dbt run exceeded 30-minute limit")
+    print(f"Command: {' '.join(e.cmd)}")
+    if e.output:
+        print(f"\nPartial stdout:\n{e.output.decode() if isinstance(e.output, bytes) else e.output}")
+    if e.stderr:
+        print(f"\nPartial stderr:\n{e.stderr.decode() if isinstance(e.stderr, bytes) else e.stderr}")
+    raise RuntimeError(f"dbt run timed out after 1800 seconds. Consider using incremental mode (refresh_mode=incremental) or increasing the timeout.")
 
 end_time = datetime.now()
 duration = (end_time - start_time).total_seconds()

@@ -41,7 +41,7 @@
 # MAGIC   COUNT(*) AS query_count
 # MAGIC FROM system.billing.usage
 # MAGIC WHERE usage_date >= CURRENT_DATE() - 7
-# MAGIC   AND workspace_id = '7474652555911318'
+# MAGIC   AND workspace_id = 'YOUR_WORKSPACE_ID'
 # MAGIC   AND sku_name LIKE '%SQL%';
 
 # COMMAND ----------
@@ -59,7 +59,7 @@
 # MAGIC   COUNT(*) AS queries_run
 # MAGIC FROM system.billing.usage
 # MAGIC WHERE usage_date >= CURRENT_DATE() - 7
-# MAGIC   AND workspace_id = '7474652555911318'
+# MAGIC   AND workspace_id = 'YOUR_WORKSPACE_ID'
 # MAGIC   AND sku_name LIKE '%SQL%'
 # MAGIC GROUP BY usage_date
 # MAGIC ORDER BY usage_date DESC;
@@ -82,7 +82,7 @@
 # MAGIC       SUM(usage_quantity) AS daily_dbu
 # MAGIC     FROM system.billing.usage
 # MAGIC     WHERE usage_date >= CURRENT_DATE() - 7
-# MAGIC       AND workspace_id = '7474652555911318'
+# MAGIC       AND workspace_id = 'YOUR_WORKSPACE_ID'
 # MAGIC       AND sku_name LIKE '%SQL%'
 # MAGIC     GROUP BY usage_date
 # MAGIC   )

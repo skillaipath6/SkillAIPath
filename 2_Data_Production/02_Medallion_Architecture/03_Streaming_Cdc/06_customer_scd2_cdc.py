@@ -1,6 +1,6 @@
 # Databricks notebook source
 # DBTITLE 1,Load Config
-# MAGIC %run ../../../1_Canvas/1_Setup/1_config
+# MAGIC %run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 
@@ -142,6 +142,30 @@ cdc_table = Config.TBL_BRONZE_CUSTOMER_CDC
 try:
     # Filter CDC events up to process_date (ChangeTimestamp is string format 'YYYY-MM-DD HH:MM:SS')
     df_cdc = spark.table(cdc_table).filter(to_date(col('ChangeTimestamp')) <= process_date)
+
+    # >>> GUARD (Phase P1, 2026-11-03): forward-only feed filter <<<
+    # Jobs 07/24 generators append customer_changes_raw rows for BatchDates that
+    # Job 05 already processed (watermark 'customer_changes_raw'). Without this
+    # guard those stale rows are re-applied: every UPDATE row closes+reopens a
+    # version (fake SCD2 changes from regenerated random data). Only process events
+    # strictly NEWER than the last processed batch.
+    try:
+        _wm = spark.sql(f"""
+            SELECT last_processed_value FROM {Config.TBL_CDC_WATERMARKS}
+            WHERE table_name = 'customer_changes_raw' ORDER BY updated_at DESC LIMIT 1
+        """).collect()
+        last_cdc_batch = _wm[0]['last_processed_value'] if _wm else None
+    except Exception:
+        last_cdc_batch = None
+    if last_cdc_batch:
+        _stale = spark.table(cdc_table).filter(
+            (to_date(col('ChangeTimestamp')) <= process_date) &
+            (to_date(col('ChangeTimestamp')) <= to_date(lit(str(last_cdc_batch))))
+        ).count()
+        df_cdc = df_cdc.filter(to_date(col('ChangeTimestamp')) > to_date(lit(str(last_cdc_batch))))
+        if _stale > 0:
+            print(f"   SHIELD: skipped {_stale:,} stale CDC events (ChangeTimestamp <= last processed batch {last_cdc_batch}) — regenerated duplicates are NOT re-applied to dim_customer")
+
     cdc_count = df_cdc.count()
 
     if cdc_count == 0:
@@ -197,6 +221,19 @@ print(f"   CDC columns: {df_cdc_hashed.columns}")
 from pyspark.sql.functions import current_timestamp
 
 df_inserts = df_cdc_hashed.filter(col('Operation') == 'INSERT')
+
+# >>> GUARD (Phase P1 / Phase A2 fix, 2026-11-03): INSERT-path existence check <<<
+# A CDC INSERT for a CustomerID already present in dim_customer (any version) must
+# NOT create a duplicate customer — the Nov 2 4AM run created 5 duplicate-current
+# pairs (SKs 7019/20, 7040/41, 7043/44, 7055/56, 7143/44) exactly this way. Known
+# IDs are dropped here; genuine attribute changes for known customers are handled
+# by the UPDATE path instead.
+_known_ids = [str(r['CustomerID']) for r in spark.sql(
+    f"SELECT DISTINCT CustomerID FROM {Config.TBL_DIM_CUSTOMER}"
+).collect()]
+if _known_ids:
+    df_inserts = df_inserts.filter(~col("CustomerID").cast("string").isin(_known_ids))
+
 insert_count = df_inserts.count()
 
 if insert_count > 0:
@@ -242,6 +279,14 @@ else:
 # DBTITLE 1,Process UPDATE - Track History (SCD Type 2)
 # Handle UPDATEs: Customer changes - FIX: Use 'Operation' column
 df_updates = df_cdc_hashed.filter(col('Operation') == 'UPDATE')
+
+# >>> GUARD (Phase P1, 2026-11-03): one change per customer per batch <<<
+# Multiple UPDATE events for the same CustomerID in one batch (regenerated overlap
+# feeds) would insert multiple new current versions. Keep the latest event only.
+df_updates = df_updates.withColumn(
+    "_rn", row_number().over(Window.partitionBy("CustomerID").orderBy(col("ChangeTimestamp").desc()))
+).filter(col("_rn") == 1).drop("_rn")
+
 update_count = df_updates.count()
 
 if update_count > 0:
@@ -251,12 +296,29 @@ if update_count > 0:
     df_current = spark.table(Config.TBL_DIM_CUSTOMER).filter(col(Config.SCD_IS_CURRENT_COL) == 1)
 
     # Join to find records to update - select dim keys + CDC data directly (no double aliasing)
+    # >>> GUARD (Phase P1 / Phase A2 fix, 2026-11-03): attribute-equality filter <<<
+    # RecordHash was computed (previous cell) but never compared (dead code) — every
+    # UPDATE event closed+reopened a version even when attributes were IDENTICAL,
+    # inflating SCD2 history on reprocessed/regenerated feed rows. Only process rows
+    # whose attributes genuinely differ from the current dim version.
+    df_dim_hashed = df_current.withColumn(
+        "DimRecordHash",
+        compute_hash(
+            col("CustomerName"),
+            col("CustomerAddress"),
+            col("CustomerContact"),
+            col("CustomerMail"),
+            col("CustomerAge"),
+            col("CustomerGender")
+        )
+    )
     df_changed = df_updates.alias("cdc") \
         .join(
-            df_current.alias("dim"),
+            df_dim_hashed.alias("dim"),
             col("cdc.CustomerID") == col("dim.CustomerID"),
             "inner"
         ) \
+        .filter(col("cdc.RecordHash") != col("dim.DimRecordHash")) \
         .select(
             col("dim.CustomerSK"),
             col("cdc.CustomerID"),
@@ -268,53 +330,64 @@ if update_count > 0:
             col("cdc.CustomerGender")
         )
 
-    actual_changes = df_changed.count()
+    # >>> FIX (Phase A, 2026-11-02): materialize df_changed BEFORE mutating the dim table <<<
+    # df_changed is LAZY. Step 1's UPDATE closes the joined IsCurrent=1 rows, so an
+    # unmaterialized df_changed re-evaluates against the mutated table in Step 2 and
+    # matches 0 rows — new versions are never inserted (Nov 2 run: 194 closed, 0 inserted).
+    # Regression-validated 24/25 on isolated DEEP CLONE (PhaseA_06cdc_SCD2_LazyFix_Regression).
+    df_changed = df_changed.cache()
+    try:
+        actual_changes = df_changed.count()   # ACTION -> cache materialized
 
-    if actual_changes > 0:
-        # Step 1: Close old records (set EndDate, IsCurrent=0)
-        yesterday = (datetime.strptime(process_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
+        if actual_changes > 0:
+            # Step 1: Close old records (set EndDate, IsCurrent=0)
+            yesterday = (datetime.strptime(process_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d")
 
-        customer_ids_to_close = [str(row['CustomerID']) for row in df_changed.select('CustomerID').distinct().collect()]
+            customer_ids_to_close = [str(row['CustomerID']) for row in df_changed.select('CustomerID').distinct().collect()]
 
-        spark.sql(f"""
-            UPDATE {Config.TBL_DIM_CUSTOMER}
-            SET EndDate = '{yesterday}', IsCurrent = 0
-            WHERE CustomerID IN ('{"', '".join(customer_ids_to_close)}')
-              AND IsCurrent = 1
-        """)
+            spark.sql(f"""
+                UPDATE {Config.TBL_DIM_CUSTOMER}
+                SET EndDate = '{yesterday}', IsCurrent = 0
+                WHERE CustomerID IN ('{"', '".join(customer_ids_to_close)}')
+                  AND IsCurrent = 1
+            """)
 
-        print(f" Closed {actual_changes:,} old records (EndDate={yesterday})")
+            print(f" Closed {actual_changes:,} old records (EndDate={yesterday})")
 
-        # Step 2: Insert new records with updated values
-        max_sk = spark.sql(f"SELECT MAX(CustomerSK) as max_sk FROM {Config.TBL_DIM_CUSTOMER}").collect()[0]['max_sk']
+            # Step 2: Insert new records with updated values
+            # (reads the CACHED pre-UPDATE df_changed — no lazy re-evaluation)
+            max_sk = spark.sql(f"SELECT MAX(CustomerSK) as max_sk FROM {Config.TBL_DIM_CUSTOMER}").collect()[0]['max_sk']
 
-        df_new_versions = df_changed \
-            .withColumn("CustomerSK", row_number().over(Window.orderBy("CustomerID")) + max_sk) \
-            .withColumn("StartDate", lit(process_date).cast("date")) \
-            .withColumn("EndDate", lit("9999-12-31").cast("date")) \
-            .withColumn("IsCurrent", lit(1)) \
-            .withColumn("LoadedAt", current_timestamp()) \
-            .select(
-                col("CustomerSK"),
-                col("CustomerID"),
-                col("CustomerName"),
-                col("CustomerMail"),
-                col("CustomerAge"),
-                col("CustomerGender"),
-                col("CustomerContact"),
-                col("CustomerAddress"),
-                col("StartDate"),
-                col("EndDate"),
-                col("IsCurrent"),
-                col("LoadedAt")
-            )
+            df_new_versions = df_changed \
+                .withColumn("CustomerSK", row_number().over(Window.orderBy("CustomerID")) + max_sk) \
+                .withColumn("StartDate", lit(process_date).cast("date")) \
+                .withColumn("EndDate", lit("9999-12-31").cast("date")) \
+                .withColumn("IsCurrent", lit(1)) \
+                .withColumn("LoadedAt", current_timestamp()) \
+                .select(
+                    col("CustomerSK"),
+                    col("CustomerID"),
+                    col("CustomerName"),
+                    col("CustomerMail"),
+                    col("CustomerAge"),
+                    col("CustomerGender"),
+                    col("CustomerContact"),
+                    col("CustomerAddress"),
+                    col("StartDate"),
+                    col("EndDate"),
+                    col("IsCurrent"),
+                    col("LoadedAt")
+                )
 
-        df_new_versions.write.mode("append").format("delta").saveAsTable(Config.TBL_DIM_CUSTOMER)
+            df_new_versions.write.mode("append").format("delta").saveAsTable(Config.TBL_DIM_CUSTOMER)
 
-        print(f" Inserted {actual_changes:,} new versions")
-        print(f" SCD Type 2: History preserved with StartDate={process_date}")
-    else:
-        print("⏩ No actual data changes (hash match - false positives)")
+            print(f" Inserted {actual_changes:,} new versions")
+            print(f" SCD Type 2: History preserved with StartDate={process_date}")
+        else:
+            print("⏩ No actual data changes (hash match - false positives)")
+    finally:
+        # Release the frozen snapshot even if Step 1/2 raise
+        df_changed.unpersist()
 else:
     print("⏩ No UPDATEs in this batch")
 

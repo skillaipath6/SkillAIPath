@@ -1074,7 +1074,7 @@ print()
 # MAGIC 3. Configure:
 # MAGIC    - **Name**: `Start_SkillAI`
 # MAGIC    - **Task**: Notebook task
-# MAGIC    - **Notebook path**: `/Users/gendlev@gmail.com/Start_SkillAI`
+# MAGIC    - **Notebook path**: `/Users/user@example.com/Start_SkillAI`
 # MAGIC    - **Cluster**: Serverless (recommended)
 # MAGIC    - **Schedule**: Manual (for demos) or Daily (for testing)
 # MAGIC 4. **Save** and click **Run Now**

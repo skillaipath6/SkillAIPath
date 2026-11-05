@@ -11,7 +11,7 @@
 WITH product_sales AS (
   SELECT
     ProductName,
-    COUNT(DISTINCT OrderID) AS total_orders,
+    COUNT(DISTINCT OrderID, BatchDate) AS total_orders, -- Phase P1: OrderID restarts daily — grain is (OrderID, BatchDate)
     SUM(ProductQuantity) AS total_quantity_sold,
     SUM(FinalPrice) AS total_revenue,
     AVG(SellingPrice) AS avg_selling_price,

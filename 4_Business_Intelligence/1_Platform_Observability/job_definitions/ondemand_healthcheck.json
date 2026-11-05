@@ -45,7 +45,7 @@
   ],
   "email_notifications": {
     "on_failure": [
-      "skillaipath15@gmail.com"
+      "user@example.com"
     ],
     "on_success": [],
     "no_alert_for_skipped_runs": false

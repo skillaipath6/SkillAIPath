@@ -154,7 +154,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "measure(total_customers)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -197,7 +205,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "measure(active_customers)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -240,7 +256,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "measure(champions_count)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -283,7 +307,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "measure(at_risk_count)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -326,7 +358,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "measure(hibernating_count)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -366,13 +406,21 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "RFM Segment Distribution",
+                "title": "Customer Segments",
                 "showTitle": true
               },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "measure(total_customers)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  },
                   "scale": {
                     "type": "quantitative"
                   }
@@ -426,13 +474,21 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Customer Risk Overview",
+                "title": "Risk Analysis",
                 "showTitle": true
               },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "measure(total_customers)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  },
                   "scale": {
                     "type": "quantitative"
                   }
@@ -503,10 +559,27 @@
                     "fieldName": "CustomerName"
                   },
                   {
-                    "fieldName": "measure(lifetime_value)"
+                    "fieldName": "measure(lifetime_value)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "INR",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      }
+                    }
                   },
                   {
-                    "fieldName": "measure(total_orders)"
+                    "fieldName": "measure(total_orders)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "RFM_Segment"
@@ -553,13 +626,21 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Customers by LTV Band",
+                "title": "Lifetime Value Distribution",
                 "showTitle": true
               },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "measure(total_customers)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  },
                   "scale": {
                     "type": "quantitative"
                   }
@@ -608,13 +689,21 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Customers by Purchase Frequency",
+                "title": "Purchase Frequency",
                 "showTitle": true
               },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "measure(total_customers)",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  },
                   "scale": {
                     "type": "quantitative"
                   }
@@ -698,10 +787,27 @@
                     "useForSearch": true
                   },
                   {
-                    "fieldName": "measure(lifetime_value)"
+                    "fieldName": "measure(lifetime_value)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "INR",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      }
+                    }
                   },
                   {
-                    "fieldName": "measure(total_orders)"
+                    "fieldName": "measure(total_orders)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 0
+                      }
+                    }
                   },
                   {
                     "fieldName": "RFM_Segment"
@@ -710,13 +816,40 @@
                     "fieldName": "customer_segment"
                   },
                   {
-                    "fieldName": "measure(Recency)"
+                    "fieldName": "measure(Recency)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      }
+                    },
+                    "displayName": "Recency (days)"
                   },
                   {
-                    "fieldName": "measure(Frequency)"
+                    "fieldName": "measure(Frequency)",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      }
+                    }
                   },
                   {
-                    "fieldName": "measure(Monetary_Lakhs)"
+                    "fieldName": "measure(Monetary_Lakhs)",
+                    "format": {
+                      "type": "number-currency",
+                      "currencyCode": "INR",
+                      "abbreviation": "compact",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      }
+                    },
+                    "displayName": "Monetary (₹ Lakhs)"
                   }
                 ]
               },
@@ -761,7 +894,15 @@
                 "value": {
                   "fieldName": "measure(risk_rate_pct)",
                   "rowNumber": 0,
-                  "formatTemplate": "{{ @formatted }}%"
+                  "formatTemplate": "{{ @formatted }}%",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  }
                 }
               },
               "data": {
@@ -804,7 +945,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "measure(high_value_customers)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -972,7 +1121,67 @@
   ],
   "uiSettings": {
     "theme": {
-      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+      "canvasBackgroundColor": {
+        "light": "#F9FAFB",
+        "dark": "#111827"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#1F2937"
+      },
+      "widgetBorderColor": {
+        "light": "#E5E7EB",
+        "dark": "#3A3F4B"
+      },
+      "selectionColor": {
+        "light": "#6366F1",
+        "dark": "#818CF8"
+      },
+      "visualizationColors": [
+        "#6366F1",
+        "#8B5CF6",
+        "#EC4899",
+        "#F59E0B",
+        "#10B981",
+        "#3B82F6",
+        "#EF4444",
+        "#8B5CF6"
+      ],
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED",
+      "widgetPadding": 16,
+      "widgetMargin": 12,
+      "widgetCornerRadius": 8,
+      "widgetShadow": 10,
+      "fontSettings": {
+        "base": {
+          "fontFamily": "Inter",
+          "fontColor": {
+            "light": "#1F272D",
+            "dark": "#E8EAED"
+          },
+          "fontSize": 13,
+          "fontWeight": 400
+        },
+        "widgetTitle": {
+          "fontFamily": "Inter",
+          "fontSize": 16,
+          "fontWeight": 600
+        },
+        "fieldTitle": {
+          "fontFamily": "Inter",
+          "fontSize": 12,
+          "fontWeight": 500
+        },
+        "fieldValue": {
+          "fontFamily": "Inter",
+          "fontSize": 14,
+          "fontWeight": 400
+        }
+      },
+      "gridLineColor": {
+        "light": "#F3F4F6",
+        "dark": "#2D3139"
+      }
     },
     "applyModeEnabled": false
   }

@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "6"
+# ///
 # DBTITLE 1,SCD Type 1: Overwrite Pattern
 # MAGIC %md
 # MAGIC # Dimension: Customer (SCD Type 1 - Overwrite)
@@ -30,7 +34,7 @@
 
 # COMMAND ----------
 
-# MAGIC %run ../../../1_Canvas/1_Setup/1_config
+# MAGIC %run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 
@@ -67,7 +71,11 @@ display(stg_customers.limit(5))
 # DBTITLE 1,Create Table Schema
 from delta.tables import DeltaTable
 from pyspark.sql import Window
-from pyspark.sql.functions import row_number
+from pyspark.sql.functions import row_number, col
+
+# Deduplicate by CustomerName + CustomerMail + CustomerContact - preserves distinct people with same name
+dedup_window = Window.partitionBy("CustomerName", "CustomerMail", "CustomerContact").orderBy("CustomerName")
+stg_customers = stg_customers.withColumn("_rn", row_number().over(dedup_window)).filter(col("_rn") == 1).drop("_rn")
 
 # Prepare staging data with metadata - use ACTUAL customer data from stg_sales!
 window_spec = Window.orderBy("CustomerName")
@@ -100,7 +108,18 @@ stg_df = stg_customers \
 table_name = f"{Config.CATALOG}.{Config.SCHEMA_SILVER}.dim_customer_scd1"
 
 if spark.catalog.tableExists(table_name):
-    print("Target table exists - performing MERGE")
+    print("Target table exists - cleaning duplicates then performing MERGE")
+    
+    # Pre-MERGE cleanup: Remove true duplicates (same name+email+phone), keep lowest customer_id
+    spark.sql(f"""
+        DELETE FROM {table_name}
+        WHERE customer_id NOT IN (
+            SELECT MIN(customer_id)
+            FROM {table_name}
+            GROUP BY customer_name, email, phone
+        )
+    """)
+    print("Duplicate cleanup completed")
     
     # Load existing dimension
     target_table = DeltaTable.forName(spark, table_name)
@@ -110,11 +129,9 @@ if spark.catalog.tableExists(table_name):
     # FIX: Use lowercase column names matching actual target table schema
     target_table.alias("target").merge(
         stg_df.alias("source"),
-        "target.customer_name = source.customer_name"
+        "target.customer_name = source.customer_name AND target.email = source.email AND target.phone = source.phone"
     ).whenMatchedUpdate(
         set={
-            "email": "source.email",
-            "phone": "source.phone",
             "city": "source.city",
             "age": "source.age",
             "gender": "source.gender",

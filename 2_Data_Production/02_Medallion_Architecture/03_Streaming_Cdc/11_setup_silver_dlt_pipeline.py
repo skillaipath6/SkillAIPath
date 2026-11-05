@@ -41,7 +41,7 @@ except ImportError:
 # COMMAND ----------
 
 # DBTITLE 1,Load Configuration
-# MAGIC %run /Shared/dev/SkillAIPath/1_Canvas/1_Setup/1_config
+# MAGIC %run /Shared/dev/SkillAIPath/1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 
@@ -190,6 +190,16 @@ displayHTML(f"""
     </p>
 </div>
 """)
+
+# COMMAND ----------
+
+# DBTITLE 1,Ensure Checkpoint Volume Exists
+# Ensure required UC volumes exist for DLT pipeline checkpoints
+try:
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {Config.CATALOG}.{Config.SCHEMA_GOLD}.checkpoints")
+    print(f"✓ Checkpoint volume ensured: {Config.CATALOG}.{Config.SCHEMA_GOLD}.checkpoints")
+except Exception as e:
+    print(f"⚠️  Could not create checkpoint volume: {str(e)[:100]}")
 
 # COMMAND ----------
 

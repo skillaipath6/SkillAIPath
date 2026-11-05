@@ -243,8 +243,10 @@
             ],
             "spec": {
               "frame": {
-                "title": "Daily Cost Trend",
-                "showTitle": true
+                "title": "Spending Trajectory",
+                "showTitle": true,
+                "description": "Daily cost trends revealing spending patterns and volatility. Identifies unusual spikes that may indicate inefficient workloads or opportunities for resource optimization.",
+                "showDescription": true
               },
               "version": 3,
               "widgetType": "line",
@@ -258,6 +260,15 @@
                 },
                 "y": {
                   "fieldName": "sum(cost_usd)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 2
+                    }
+                  },
                   "displayName": "Cost (USD)",
                   "scale": {
                     "type": "quantitative"
@@ -300,8 +311,10 @@
             ],
             "spec": {
               "frame": {
-                "title": "Cost by Compute Type",
-                "showTitle": true
+                "title": "Workload Mix",
+                "showTitle": true,
+                "description": "Cost distribution across compute tiers (interactive, scheduled jobs, analytics, pipelines). Reveals which workload types drive spending and where consolidation opportunities exist.",
+                "showDescription": true
               },
               "version": 3,
               "widgetType": "pie",
@@ -310,6 +323,15 @@
                   "fieldName": "sum(cost_usd)",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 2
+                    }
                   },
                   "displayName": "Cost (USD)"
                 },
@@ -338,17 +360,18 @@
             "name": "pricing_title",
             "multilineTextboxSpec": {
               "lines": [
-                "## ⚠️ Cost Calculation Notice\n",
+                "## 📊 Cost Estimation Methodology\n",
                 "\n",
-                "**All cost values shown in this dashboard are ESTIMATES based on reference DBU pricing rates.**\n",
+                "**All cost values represent estimates based on standard Databricks list pricing and may differ from your actual contracted rates.**\n",
                 "\n",
-                "The `system.billing.usage` table contains DBU consumption data but NOT actual costs. Costs are calculated using standard reference rates:\n",
-                "* **All-Purpose Compute**: $0.55/DBU\n",
-                "* **Jobs Compute**: $0.15/DBU  \n",
-                "* **SQL Compute**: $0.22/DBU\n",
-                "* **DLT Pipelines**: $0.30/DBU\n",
+                "The platform consumption data is sourced from `system.billing.usage` with costs calculated using reference DBU pricing:\n",
                 "\n",
-                "**Your actual costs may differ** based on your organization's contracted pricing with Databricks."
+                "* **Interactive Compute**: $0.55 per DBU\n",
+                "* **Scheduled Jobs**: $0.15 per DBU  \n",
+                "* **SQL Analytics**: $0.22 per DBU\n",
+                "* **Data Pipelines**: $0.30 per DBU\n",
+                "\n",
+                "*For precise financial reporting, reconcile these estimates with your organization's negotiated pricing agreement.*"
               ]
             }
           },
@@ -384,8 +407,10 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Daily DBU Consumption",
-                "showTitle": true
+                "title": "Resource Demand",
+                "showTitle": true,
+                "description": "Daily compute consumption patterns showing workload intensity over time. Helps capacity planning teams anticipate infrastructure needs and optimize resource scheduling.",
+                "showDescription": true
               },
               "widgetType": "line",
               "encodings": {
@@ -398,7 +423,15 @@
                 },
                 "y": {
                   "fieldName": "sum(total_dbus)",
-                  "displayName": "total_dbus",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  },
+                  "displayName": "DBU Consumed",
                   "scale": {
                     "type": "quantitative"
                   }
@@ -441,8 +474,10 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Top 10 Jobs by Estimated Cost",
-                "showTitle": true
+                "title": "Cost Leaders",
+                "showTitle": true,
+                "description": "Top 10 highest-cost jobs this month. Prioritizes optimization efforts by highlighting the workloads with the greatest financial impact on the platform budget.",
+                "showDescription": true
               },
               "widgetType": "bar",
               "encodings": {
@@ -492,14 +527,6 @@
                   "datasetName": "cost_by_job",
                   "fields": [
                     {
-                      "name": "job_name",
-                      "expression": "`job_name`"
-                    },
-                    {
-                      "name": "cost_usd",
-                      "expression": "`cost_usd`"
-                    },
-                    {
                       "name": "total_dbus",
                       "expression": "`total_dbus`"
                     },
@@ -515,29 +542,14 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Cost by Job",
-                "showTitle": true
+                "title": "Job Economics",
+                "showTitle": true,
+                "description": "Comprehensive cost breakdown for all jobs. Enables detailed analysis of workload efficiency, run frequency, and per-execution costs to drive targeted optimization initiatives.",
+                "showDescription": true
               },
               "widgetType": "table",
               "encodings": {
                 "columns": [
-                  {
-                    "fieldName": "job_name",
-                    "displayName": "Job Name"
-                  },
-                  {
-                    "fieldName": "cost_usd",
-                    "format": {
-                      "type": "number-currency",
-                      "currencyCode": "USD",
-                      "abbreviation": "none",
-                      "decimalPlaces": {
-                        "type": "exact",
-                        "places": 2
-                      }
-                    },
-                    "displayName": "Est. Cost (USD)"
-                  },
                   {
                     "fieldName": "total_dbus",
                     "format": {
@@ -545,14 +557,20 @@
                       "abbreviation": "none",
                       "decimalPlaces": {
                         "type": "exact",
-                        "places": 2
+                        "places": 0
                       }
-                    },
-                    "displayName": "DBU"
+                    }
                   },
                   {
                     "fieldName": "run_count",
-                    "displayName": "Runs"
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 0
+                      }
+                    }
                   }
                 ]
               },
@@ -589,14 +607,24 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Total DBUs MTD",
-                "showTitle": true
+                "title": "Platform Consumption",
+                "showTitle": true,
+                "description": "Total DBU units consumed month-to-date. Tracks compute resource utilization across all workloads—a leading indicator of platform adoption and infrastructure scaling needs.",
+                "showDescription": true
               },
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "max(total_dbus_mtd)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -632,8 +660,10 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Est. Total Cost MTD",
-                "showTitle": true
+                "title": "Monthly Spend",
+                "showTitle": true,
+                "description": "Estimated infrastructure costs incurred this month. Provides real-time visibility into cloud spending to enable proactive budget management and cost optimization decisions.",
+                "showDescription": true
               },
               "widgetType": "counter",
               "encodings": {
@@ -683,8 +713,10 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Est. Avg Daily Cost",
-                "showTitle": true
+                "title": "Daily Run Rate",
+                "showTitle": true,
+                "description": "Average daily infrastructure spend. Critical metric for forecasting month-end costs and identifying spending trends that may require operational adjustments.",
+                "showDescription": true
               },
               "widgetType": "counter",
               "encodings": {
@@ -734,8 +766,10 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Ref. Budget Remaining",
-                "showTitle": true
+                "title": "Budget Headroom",
+                "showTitle": true,
+                "description": "Remaining budget allocation for the current month. Essential for capacity planning and ensuring infrastructure investments stay within approved financial boundaries.",
+                "showDescription": true
               },
               "widgetType": "counter",
               "encodings": {
@@ -785,8 +819,10 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Ref. Budget Utilization",
-                "showTitle": true
+                "title": "Budget Utilization",
+                "showTitle": true,
+                "description": "Percentage of monthly budget consumed. Key performance indicator for financial governance—values approaching 100% signal the need for budget reviews or workload optimization.",
+                "showDescription": true
               },
               "widgetType": "counter",
               "encodings": {
@@ -796,7 +832,7 @@
                     "type": "number-percent",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 2
+                      "places": 1
                     }
                   }
                 }
@@ -827,23 +863,26 @@
         "light": "#FFFFFF"
       },
       "selectionColor": {
-        "light": "#1976D2"
+        "light": "#6366F1",
+        "dark": "#6366F1"
       },
       "visualizationColors": [
-        "#1E88E5",
-        "#43A047",
-        "#FB8C00",
-        "#E53935",
-        "#8E24AA",
-        "#00ACC1",
-        "#FDD835",
-        "#C0CA33"
+        "#6366F1",
+        "#8B5CF6",
+        "#A78BFA",
+        "#C4B5FD",
+        "#DDD6FE",
+        "#EC4899",
+        "#F472B6",
+        "#FB923C",
+        "#FBBF24",
+        "#34D399"
       ],
       "widgetHeaderAlignment": "LEFT",
-      "widgetPadding": 20,
-      "widgetMargin": 8,
-      "widgetCornerRadius": 12,
-      "widgetShadow": 15,
+      "widgetPadding": 16,
+      "widgetMargin": 12,
+      "widgetCornerRadius": 8,
+      "widgetShadow": 10,
       "fontSettings": {
         "base": {
           "fontFamily": "Inter",

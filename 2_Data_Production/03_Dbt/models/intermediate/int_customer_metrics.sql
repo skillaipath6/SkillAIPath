@@ -12,7 +12,7 @@
 WITH customer_orders AS (
   SELECT
     CustomerName,
-    COUNT(DISTINCT OrderID) AS order_count,
+    COUNT(DISTINCT OrderID, BatchDate) AS order_count, -- Phase P1: OrderID restarts daily — grain is (OrderID, BatchDate)
     SUM(FinalPrice) AS total_spent,
     AVG(FinalPrice) AS avg_order_value,
     MIN(OrderDate) AS first_order_date,

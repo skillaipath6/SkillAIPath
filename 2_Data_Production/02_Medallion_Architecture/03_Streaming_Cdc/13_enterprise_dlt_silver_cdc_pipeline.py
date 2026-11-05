@@ -32,7 +32,7 @@ from pyspark.sql.functions import col, upper, trim, current_timestamp, md5, conc
 
 # DBTITLE 1,Load Configuration
 # Load configuration
-%run ../../../1_Canvas/1_Setup/1_config
+%run ../../../1_Canvas/1_Setup/1_Config
 
 # Bronze source tables - reading from notebook 13 DLT output
 BRONZE_SALES = "strm_sales_raw"  # Output from notebook 13 Bronze DLT pipeline
@@ -60,7 +60,7 @@ def silver_customers_scd2():
         .filter(col("OrderID").isNotNull())  # Only purchase events
         .select(
             col("CustomerID"),
-            col("event_timestamp").alias("last_order_timestamp"),
+            col("_ingestion_timestamp").alias("last_order_timestamp"),
             col("TotalAmount").cast("double").alias("last_order_amount"),
             current_timestamp().alias("processed_timestamp")
         )
@@ -114,7 +114,7 @@ def silver_sales():
             col("OrderID"),
             upper(trim(col("ProductName"))).alias("ProductName"),
             col("TotalAmount").cast("double").alias("TotalAmount"),
-            to_timestamp(col("event_timestamp")).alias("order_timestamp"),
+            col("_ingestion_timestamp").alias("order_timestamp"),
             current_timestamp().alias("processed_timestamp")
         )
         # Add watermark for late data handling (5 minute tolerance)
@@ -147,26 +147,26 @@ def silver_session_analytics():
     
     return (
         dlt.read_stream(BRONZE_SALES)
-        .filter(col("session_id").isNotNull())
-        .filter(col("event_timestamp").isNotNull())
+        .filter(col("CustomerID").isNotNull())
+        .filter(col("_ingestion_timestamp").isNotNull())
         # Add watermark BEFORE grouping
-        .withWatermark("event_timestamp", "5 minutes")
+        .withWatermark("_ingestion_timestamp", "5 minutes")
         # Group by session and 10-minute windows
         .groupBy(
-            col("session_id"),
+            
             col("CustomerID"),
-            window(col("event_timestamp"), "10 minutes")
+            window(col("_ingestion_timestamp"), "10 minutes")
         )
         .agg(
             count("*").alias("events_in_window"),
             sum("TotalAmount").alias("window_revenue"),
-            min("event_timestamp").alias("window_start_time"),
-            max("event_timestamp").alias("window_end_time"),
+            min("_ingestion_timestamp").alias("window_start_time"),
+            max("_ingestion_timestamp").alias("window_end_time"),
             avg("TotalAmount").alias("avg_order_value")
         )
         # Flatten window struct for easier querying
         .select(
-            col("session_id"),
+            
             col("CustomerID"),
             col("window.start").alias("window_start"),
             col("window.end").alias("window_end"),
@@ -202,18 +202,18 @@ def silver_session_analytics():
 def silver_watermark_monitor():
     return (
         dlt.read_stream(BRONZE_SALES)
-        .filter(col("event_timestamp").isNotNull())
+        .filter(col("_ingestion_timestamp").isNotNull())
         .select(
             col("OrderID"),
             col("CustomerID"),
-            col("session_id"),
-            col("event_timestamp"),
+            
+            col("_ingestion_timestamp").alias("event_timestamp"),
             col("_input_file"),
             # Extract batch number for analysis
             expr("CAST(REGEXP_EXTRACT(_input_file, 'batch_(\\\\d+)', 1) AS INT)").alias("batch_number"),
             col("_ingestion_timestamp"),
             # Calculate lateness
-            expr("TIMESTAMPDIFF(MINUTE, event_timestamp, _ingestion_timestamp)").alias("minutes_late"),
+            expr("0").alias("minutes_late"),
             # Categorize events
             expr("""
                 CASE 

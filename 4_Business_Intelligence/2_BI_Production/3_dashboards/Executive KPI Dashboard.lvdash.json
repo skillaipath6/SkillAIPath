@@ -7,9 +7,18 @@
         "SELECT\n",
         "  SUM(finalprice * ProductQuantity) as mtd_revenue\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales\n",
+        "  sap_main.silver.fact_sales\n",
         "WHERE\n",
-        "  DATE_TRUNC('MONTH', BatchDate) = '2026-08-01'"
+        "  DATE_TRUNC('MONTH', BatchDate)\n",
+        "    = DATE_TRUNC(\n",
+        "      'MONTH',\n",
+        "      (\n",
+        "        SELECT\n",
+        "          MAX(BatchDate)\n",
+        "        FROM\n",
+        "          sap_main.silver.fact_sales\n",
+        "      )\n",
+        "    )"
       ]
     },
     {
@@ -20,7 +29,7 @@
         "  BatchDate as date,\n",
         "  COUNT(DISTINCT OrderID) as daily_orders\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales\n",
+        "  sap_main.silver.fact_sales\n",
         "GROUP BY\n",
         "  BatchDate\n",
         "ORDER BY\n",
@@ -34,9 +43,18 @@
         "SELECT\n",
         "  SUM(finalprice * ProductQuantity) as ytd_revenue\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales\n",
+        "  sap_main.silver.fact_sales\n",
         "WHERE\n",
-        "  YEAR(BatchDate) = 2026"
+        "  BatchDate\n",
+        "    >= DATE_TRUNC(\n",
+        "      'YEAR',\n",
+        "      (\n",
+        "        SELECT\n",
+        "          MAX(BatchDate)\n",
+        "        FROM\n",
+        "          sap_main.silver.fact_sales\n",
+        "      )\n",
+        "    )"
       ]
     },
     {
@@ -46,57 +64,158 @@
         "SELECT\n",
         "  COUNT(DISTINCT OrderID) as total_orders\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales"
+        "  sap_main.silver.fact_sales"
       ]
     },
     {
       "name": "mom_growth",
-      "displayName": "MoM Growth % — MTD vs Prior MTD",
+      "displayName": "MoM Growth % — MTD vs Prior MTD (dynamic)",
       "queryLines": [
+        "WITH params AS (\n",
+        "  SELECT\n",
+        "    DATE_TRUNC('MONTH', MAX(BatchDate)) as current_month,\n",
+        "    MAX(BatchDate) as max_date\n",
+        "  FROM\n",
+        "    sap_main.silver.fact_sales\n",
+        "),\n",
+        "current_mtd AS (\n",
+        "  SELECT\n",
+        "    SUM(finalprice * ProductQuantity) as revenue\n",
+        "  FROM\n",
+        "    sap_main.silver.fact_sales f CROSS JOIN params p\n",
+        "  WHERE\n",
+        "    DATE_TRUNC('MONTH', f.BatchDate) = p.current_month\n",
+        "),\n",
+        "prior_mtd AS (\n",
+        "  SELECT\n",
+        "    SUM(finalprice * ProductQuantity) as revenue\n",
+        "  FROM\n",
+        "    sap_main.silver.fact_sales f CROSS JOIN params p\n",
+        "  WHERE\n",
+        "    DATE_TRUNC('MONTH', f.BatchDate) = p.current_month - INTERVAL 1 MONTH\n",
+        "    AND DAY(f.BatchDate) <= DAY(p.max_date)\n",
+        "),\n",
+        "day_revenue AS (\n",
+        "  SELECT\n",
+        "    BatchDate as day,\n",
+        "    SUM(finalprice * ProductQuantity) as revenue\n",
+        "  FROM\n",
+        "    sap_main.silver.fact_sales\n",
+        "  GROUP BY\n",
+        "    BatchDate\n",
+        "),\n",
+        "ranked AS (\n",
+        "  SELECT\n",
+        "    revenue,\n",
+        "    DENSE_RANK() OVER (ORDER BY day DESC) as recency_rank\n",
+        "  FROM\n",
+        "    day_revenue\n",
+        "),\n",
+        "fb_params AS (\n",
+        "  SELECT\n",
+        "    LEAST(30, FLOOR(COUNT(*) / 2)) as window_days\n",
+        "  FROM\n",
+        "    ranked\n",
+        "),\n",
+        "fb_windows AS (\n",
+        "  SELECT\n",
+        "    SUM(\n",
+        "      CASE\n",
+        "        WHEN recency_rank <= p.window_days THEN r.revenue\n",
+        "      END\n",
+        "    ) as fallback_current,\n",
+        "    SUM(\n",
+        "      CASE\n",
+        "        WHEN\n",
+        "          recency_rank > p.window_days\n",
+        "          AND recency_rank <= 2 * p.window_days\n",
+        "        THEN\n",
+        "          r.revenue\n",
+        "      END\n",
+        "    ) as fallback_prior\n",
+        "  FROM\n",
+        "    ranked r CROSS JOIN fb_params p\n",
+        ")\n",
         "SELECT\n",
-        "  ROUND(\n",
-        "    (\n",
-        "      (\n",
-        "        SUM(\n",
-        "          CASE\n",
-        "            WHEN\n",
-        "              BatchDate >= '2026-08-01'\n",
-        "              AND BatchDate <= '2026-08-08'\n",
-        "            THEN\n",
-        "              finalprice * ProductQuantity\n",
-        "            ELSE 0\n",
-        "          END\n",
-        "        )\n",
-        "          - SUM(\n",
-        "            CASE\n",
-        "              WHEN\n",
-        "                BatchDate >= '2026-07-09'\n",
-        "                AND BatchDate <= '2026-07-16'\n",
-        "              THEN\n",
-        "                finalprice * ProductQuantity\n",
-        "              ELSE 0\n",
-        "            END\n",
+        "  CASE\n",
+        "    WHEN\n",
+        "      COALESCE(\n",
+        "        (\n",
+        "          SELECT\n",
+        "            revenue\n",
+        "          FROM\n",
+        "            prior_mtd\n",
+        "        ),\n",
+        "        0\n",
+        "      ) <> 0\n",
+        "    THEN\n",
+        "      ROUND(\n",
+        "        (\n",
+        "          (\n",
+        "            SELECT\n",
+        "              revenue\n",
+        "            FROM\n",
+        "              current_mtd\n",
         "          )\n",
-        "      )\n",
-        "        * 100.0\n",
-        "        / NULLIF(\n",
-        "          SUM(\n",
-        "            CASE\n",
-        "              WHEN\n",
-        "                BatchDate >= '2026-07-09'\n",
-        "                AND BatchDate <= '2026-07-16'\n",
-        "              THEN\n",
-        "                finalprice * ProductQuantity\n",
-        "              ELSE 0\n",
-        "            END\n",
-        "          ),\n",
-        "          0\n",
+        "            - (\n",
+        "              SELECT\n",
+        "                revenue\n",
+        "              FROM\n",
+        "                prior_mtd\n",
+        "            )\n",
         "        )\n",
-        "    ),\n",
-        "    2\n",
-        "  ) as mom_growth_pct\n",
-        "FROM\n",
-        "  sap_dev.silver.fact_sales"
+        "          * 100.0\n",
+        "          / (\n",
+        "            SELECT\n",
+        "              revenue\n",
+        "            FROM\n",
+        "              prior_mtd\n",
+        "          ),\n",
+        "        2\n",
+        "      )\n",
+        "    WHEN\n",
+        "      (\n",
+        "        SELECT\n",
+        "          window_days\n",
+        "        FROM\n",
+        "          fb_params\n",
+        "      ) >= 2\n",
+        "      AND COALESCE(\n",
+        "        (\n",
+        "          SELECT\n",
+        "            fallback_prior\n",
+        "          FROM\n",
+        "            fb_windows\n",
+        "        ),\n",
+        "        0\n",
+        "      ) <> 0\n",
+        "    THEN\n",
+        "      ROUND(\n",
+        "        (\n",
+        "          (\n",
+        "            SELECT\n",
+        "              fallback_current\n",
+        "            FROM\n",
+        "              fb_windows\n",
+        "          )\n",
+        "            - (\n",
+        "              SELECT\n",
+        "                fallback_prior\n",
+        "              FROM\n",
+        "                fb_windows\n",
+        "            )\n",
+        "        )\n",
+        "          * 100.0\n",
+        "          / (\n",
+        "            SELECT\n",
+        "              fallback_prior\n",
+        "            FROM\n",
+        "              fb_windows\n",
+        "          ),\n",
+        "        2\n",
+        "      )\n",
+        "    ELSE NULL\n",
+        "  END as mom_growth_pct"
       ]
     },
     {
@@ -106,7 +225,7 @@
         "SELECT\n",
         "  COUNT(DISTINCT CustomerSK) as active_customers\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales"
+        "  sap_main.silver.fact_sales"
       ]
     },
     {
@@ -117,7 +236,7 @@
         "  BatchDate as date,\n",
         "  SUM(finalprice * ProductQuantity) as daily_revenue\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales\n",
+        "  sap_main.silver.fact_sales\n",
         "GROUP BY\n",
         "  BatchDate\n",
         "ORDER BY\n",
@@ -126,54 +245,95 @@
     },
     {
       "name": "wow_growth",
-      "displayName": "WoW Growth",
+      "displayName": "WoW Growth (dynamic)",
       "queryLines": [
-        "WITH week_data AS (\n",
+        "WITH day_revenue AS (\n",
         "  SELECT\n",
-        "    CASE\n",
-        "      WHEN\n",
-        "        BatchDate >= '2026-07-27'\n",
-        "        AND BatchDate < '2026-08-03'\n",
-        "      THEN\n",
-        "        'current_week'\n",
-        "      WHEN\n",
-        "        BatchDate >= '2026-07-20'\n",
-        "        AND BatchDate < '2026-07-27'\n",
-        "      THEN\n",
-        "        'prior_week'\n",
-        "    END as week_label,\n",
-        "    SUM(finalprice * ProductQuantity) as week_revenue\n",
+        "    BatchDate as day,\n",
+        "    SUM(finalprice * ProductQuantity) as revenue\n",
         "  FROM\n",
-        "    sap_dev.silver.fact_sales\n",
-        "  WHERE\n",
-        "    BatchDate >= '2026-07-20'\n",
-        "    AND BatchDate < '2026-08-03'\n",
+        "    sap_main.silver.fact_sales\n",
         "  GROUP BY\n",
-        "    week_label\n",
+        "    BatchDate\n",
+        "),\n",
+        "ranked AS (\n",
+        "  SELECT\n",
+        "    revenue,\n",
+        "    DENSE_RANK() OVER (ORDER BY day DESC) as recency_rank\n",
+        "  FROM\n",
+        "    day_revenue\n",
+        "),\n",
+        "params AS (\n",
+        "  SELECT\n",
+        "    LEAST(7, FLOOR(COUNT(*) / 2)) as window_days\n",
+        "  FROM\n",
+        "    ranked\n",
+        "),\n",
+        "windows AS (\n",
+        "  SELECT\n",
+        "    SUM(\n",
+        "      CASE\n",
+        "        WHEN recency_rank <= p.window_days THEN r.revenue\n",
+        "      END\n",
+        "    ) as current_revenue,\n",
+        "    SUM(\n",
+        "      CASE\n",
+        "        WHEN\n",
+        "          recency_rank > p.window_days\n",
+        "          AND recency_rank <= 2 * p.window_days\n",
+        "        THEN\n",
+        "          r.revenue\n",
+        "      END\n",
+        "    ) as prior_revenue\n",
+        "  FROM\n",
+        "    ranked r CROSS JOIN params p\n",
         ")\n",
         "SELECT\n",
-        "  (\n",
-        "    (\n",
-        "      MAX(\n",
-        "        CASE\n",
-        "          WHEN week_label = 'current_week' THEN week_revenue\n",
-        "        END\n",
-        "      )\n",
-        "        - MAX(\n",
-        "          CASE\n",
-        "            WHEN week_label = 'prior_week' THEN week_revenue\n",
-        "          END\n",
+        "  CASE\n",
+        "    WHEN\n",
+        "      (\n",
+        "        SELECT\n",
+        "          window_days\n",
+        "        FROM\n",
+        "          params\n",
+        "      ) < 2\n",
+        "      OR COALESCE(\n",
+        "        (\n",
+        "          SELECT\n",
+        "            prior_revenue\n",
+        "          FROM\n",
+        "            windows\n",
+        "        ),\n",
+        "        0\n",
+        "      ) = 0\n",
+        "    THEN\n",
+        "      NULL\n",
+        "    ELSE\n",
+        "      ROUND(\n",
+        "        (\n",
+        "          (\n",
+        "            SELECT\n",
+        "              current_revenue\n",
+        "            FROM\n",
+        "              windows\n",
+        "          )\n",
+        "            - (\n",
+        "              SELECT\n",
+        "                prior_revenue\n",
+        "              FROM\n",
+        "                windows\n",
+        "            )\n",
         "        )\n",
-        "    )\n",
-        "      / MAX(\n",
-        "        CASE\n",
-        "          WHEN week_label = 'prior_week' THEN week_revenue\n",
-        "        END\n",
+        "          * 100.0\n",
+        "          / (\n",
+        "            SELECT\n",
+        "              prior_revenue\n",
+        "            FROM\n",
+        "              windows\n",
+        "          ),\n",
+        "        2\n",
         "      )\n",
-        "      * 100\n",
-        "  ) as wow_growth_pct\n",
-        "FROM\n",
-        "  week_data"
+        "  END as wow_growth_pct"
       ]
     },
     {
@@ -187,7 +347,7 @@
         "      * 100\n",
         "  ) as margin_pct\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales"
+        "  sap_main.silver.fact_sales"
       ]
     },
     {
@@ -198,8 +358,8 @@
         "  p.ProductCategory,\n",
         "  SUM(f.finalprice * f.ProductQuantity) as category_revenue\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales f\n",
-        "    JOIN sap_dev.gold.mart_product_performance p\n",
+        "  sap_main.silver.fact_sales f\n",
+        "    JOIN sap_main.gold.mart_product_performance p\n",
         "      ON f.ProductSK = p.ProductSK\n",
         "GROUP BY\n",
         "  p.ProductCategory\n",
@@ -219,19 +379,19 @@
         "    COUNT(DISTINCT OrderID) as total_orders,\n",
         "    COUNT(DISTINCT CustomerSK) as active_customers\n",
         "  FROM\n",
-        "    sap_dev.silver.fact_sales\n",
+        "    sap_main.silver.fact_sales\n",
         "),\n",
         "top_cat AS (\n",
         "  SELECT\n",
         "    p.ProductCategory\n",
         "  FROM\n",
-        "    sap_dev.silver.fact_sales f\n",
-        "      JOIN sap_dev.gold.mart_product_performance p\n",
+        "    sap_main.silver.fact_sales f\n",
+        "      JOIN sap_main.gold.mart_product_performance p\n",
         "        ON f.ProductSK = p.ProductSK\n",
         "  GROUP BY\n",
         "    p.ProductCategory\n",
         "  ORDER BY\n",
-        "    SUM(f.finalprice * f.ProductQuantity) DESC\n",
+        "    SUM(f.finalprice * ProductQuantity) DESC\n",
         "  LIMIT 1\n",
         ")\n",
         "SELECT\n",
@@ -279,25 +439,10 @@
         "  MIN(BatchDate) as min_date,\n",
         "  MAX(BatchDate) as max_date,\n",
         "  COUNT(DISTINCT BatchDate) as distinct_days,\n",
-        "  SUM(\n",
-        "    CASE\n",
-        "      WHEN DATE_TRUNC('MONTH', BatchDate) = '2026-07-01' THEN 1\n",
-        "      ELSE 0\n",
-        "    END\n",
-        "  ) as july_rows,\n",
-        "  SUM(\n",
-        "    CASE\n",
-        "      WHEN DATE_TRUNC('MONTH', BatchDate) = '2026-08-01' THEN 1\n",
-        "      ELSE 0\n",
-        "    END\n",
-        "  ) as august_rows,\n",
-        "  MAX(\n",
-        "    CASE\n",
-        "      WHEN DATE_TRUNC('MONTH', BatchDate) = '2026-08-01' THEN BatchDate\n",
-        "    END\n",
-        "  ) as max_august_date\n",
+        "  COUNT(*) as total_rows,\n",
+        "  DATE_TRUNC('MONTH', MAX(BatchDate)) as latest_batch_month\n",
         "FROM\n",
-        "  sap_dev.silver.fact_sales"
+        "  sap_main.silver.fact_sales"
       ]
     }
   ],
@@ -396,7 +541,15 @@
                 },
                 "y": {
                   "fieldName": "sum(daily_orders)",
-                  "displayName": "daily_orders",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  },
+                  "displayName": "Daily Orders",
                   "scale": {
                     "type": "quantitative"
                   }
@@ -409,7 +562,7 @@
           },
           "position": {
             "x": 0,
-            "y": 7,
+            "y": 9,
             "width": 6,
             "height": 5
           }
@@ -453,7 +606,16 @@
                 },
                 "y": {
                   "fieldName": "sum(daily_revenue)",
-                  "displayName": "daily_revenue",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 2
+                    }
+                  },
+                  "displayName": "Daily Revenue",
                   "scale": {
                     "type": "quantitative"
                   }
@@ -466,7 +628,7 @@
           },
           "position": {
             "x": 0,
-            "y": 2,
+            "y": 4,
             "width": 12,
             "height": 5
           }
@@ -503,10 +665,12 @@
               "encodings": {
                 "columns": [
                   {
-                    "fieldName": "metric_name"
+                    "fieldName": "metric_name",
+                    "displayName": "Metric Name"
                   },
                   {
-                    "fieldName": "metric_value"
+                    "fieldName": "metric_value",
+                    "displayName": "Metric Value"
                   }
                 ]
               },
@@ -517,7 +681,7 @@
           },
           "position": {
             "x": 0,
-            "y": 12,
+            "y": 14,
             "width": 12,
             "height": 4
           }
@@ -550,7 +714,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "sum(active_customers)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -560,8 +732,8 @@
           },
           "position": {
             "x": 8,
-            "y": 0,
-            "width": 2,
+            "y": 2,
+            "width": 4,
             "height": 2
           }
         },
@@ -648,6 +820,15 @@
               "encodings": {
                 "x": {
                   "fieldName": "sum(category_revenue)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 2
+                    }
+                  },
                   "displayName": "Revenue",
                   "scale": {
                     "type": "quantitative"
@@ -668,7 +849,7 @@
           },
           "position": {
             "x": 6,
-            "y": 7,
+            "y": 9,
             "width": 6,
             "height": 5
           }
@@ -701,7 +882,15 @@
               "encodings": {
                 "value": {
                   "fieldName": "sum(total_orders)",
-                  "rowNumber": 0
+                  "rowNumber": 0,
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
+                  }
                 }
               },
               "data": {
@@ -710,9 +899,9 @@
             }
           },
           "position": {
-            "x": 6,
-            "y": 0,
-            "width": 1,
+            "x": 0,
+            "y": 2,
+            "width": 4,
             "height": 2
           }
         },
@@ -735,11 +924,15 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "WoW Growth %",
-                "showTitle": true
+                "showTitle": true,
+                "title": {
+                  "value": "WoW Growth %",
+                  "fields": []
+                },
+                "description": "Latest N available days vs prior N days (N up to 7, scaled to available history). True 7-day week-over-week once 14+ days of data exist."
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -750,7 +943,7 @@
                     "abbreviation": "none",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 2
+                      "places": 1
                     }
                   },
                   "formatTemplate": "{{ @formatted }}%"
@@ -764,7 +957,7 @@
           "position": {
             "x": 4,
             "y": 0,
-            "width": 2,
+            "width": 4,
             "height": 2
           }
         },
@@ -787,12 +980,15 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "8-Day Growth % (Aug 1-8 vs Jul 9-16)",
                 "showTitle": true,
-                "description": "Note: True MoM unavailable due to data starting Jul 9. Comparing latest 8 days vs prior 8 available days."
+                "title": "MoM Growth %",
+                "description": {
+                  "value": "Month-to-date vs prior month-to-date (same-day cutoff). Falls back to latest half vs prior half of available days when prior-month data is unavailable.",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -803,7 +999,7 @@
                     "abbreviation": "none",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 2
+                      "places": 1
                     }
                   },
                   "formatTemplate": "{{ @formatted }}%"
@@ -815,9 +1011,9 @@
             }
           },
           "position": {
-            "x": 7,
-            "y": 0,
-            "width": 1,
+            "x": 4,
+            "y": 2,
+            "width": 4,
             "height": 2
           }
         },
@@ -855,7 +1051,7 @@
                     "abbreviation": "none",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 2
+                      "places": 1
                     }
                   },
                   "formatTemplate": "{{ @formatted }}%"
@@ -867,9 +1063,9 @@
             }
           },
           "position": {
-            "x": 10,
+            "x": 8,
             "y": 0,
-            "width": 2,
+            "width": 4,
             "height": 2
           }
         }
@@ -880,7 +1076,20 @@
   ],
   "uiSettings": {
     "theme": {
-      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+      "selectionColor": {
+        "light": "#6366F1",
+        "dark": "#6366F1"
+      },
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED",
+      "widgetPadding": 16,
+      "widgetMargin": 12,
+      "widgetCornerRadius": 8,
+      "widgetShadow": 50,
+      "fontSettings": {
+        "base": {
+          "fontFamily": "Inter"
+        }
+      }
     },
     "applyModeEnabled": false
   }

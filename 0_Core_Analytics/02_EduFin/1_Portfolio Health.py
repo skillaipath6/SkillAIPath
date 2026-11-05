@@ -7,7 +7,7 @@
 # MAGIC %md
 # MAGIC # Portfolio Health Analysis
 # MAGIC
-# MAGIC **Dataset:** `workspace.sap_dev.loans`
+# MAGIC **Dataset:** `sap_dev.edufin_regional.loans`
 
 # COMMAND ----------
 
@@ -18,7 +18,7 @@
 # MAGIC   COUNT(*) AS total_loans,
 # MAGIC   COUNT(DISTINCT loan_status) AS status_types,
 # MAGIC   COUNT(DISTINCT customer_id) AS unique_customers
-# MAGIC FROM workspace.sap_dev.loans;
+# MAGIC FROM sap_dev.edufin_regional.loans;
 
 # COMMAND ----------
 
@@ -30,7 +30,7 @@
 # MAGIC   loan_status,
 # MAGIC   COUNT(*) AS loan_count,
 # MAGIC   ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS percentage
-# MAGIC FROM workspace.sap_dev.loans
+# MAGIC FROM sap_dev.edufin_regional.loans
 # MAGIC GROUP BY loan_status
 # MAGIC ORDER BY loan_count DESC;
 # MAGIC
@@ -50,7 +50,7 @@
 # MAGIC   COUNT(*) AS total_loans,
 # MAGIC   ROUND(SUM(loan_amount) / 10000000, 2) AS portfolio_value_cr,
 # MAGIC   ROUND(AVG(loan_amount) / 100000, 2) AS avg_loan_size_lakh
-# MAGIC FROM workspace.sap_dev.loans;
+# MAGIC FROM sap_dev.edufin_regional.loans;
 # MAGIC
 
 # COMMAND ----------
@@ -73,7 +73,7 @@
 # MAGIC   SUM(CASE WHEN loan_status = 'Defaulted' THEN 1 ELSE 0 END) AS defaulted_count,
 # MAGIC   SUM(CASE WHEN loan_status = 'Overdue' THEN 1 ELSE 0 END) AS overdue_count,
 # MAGIC   SUM(CASE WHEN loan_status = 'Active' THEN 1 ELSE 0 END) AS active_count
-# MAGIC FROM workspace.sap_dev.loans
+# MAGIC FROM sap_dev.edufin_regional.loans
 # MAGIC GROUP BY risk_band
 # MAGIC ORDER BY 
 # MAGIC   CASE 
@@ -95,7 +95,7 @@
 # MAGIC SELECT 
 # MAGIC   loan_status,
 # MAGIC   ROUND(SUM(loan_amount) / 10000000, 2) AS total_value_cr
-# MAGIC FROM workspace.sap_dev.loans
+# MAGIC FROM sap_dev.edufin_regional.loans
 # MAGIC GROUP BY loan_status
 # MAGIC ORDER BY total_value_cr DESC;
 # MAGIC
@@ -119,7 +119,7 @@
 # MAGIC     ROUND(SUM(loan_amount) / 10000000, 2) AS portfolio_value_cr,
 # MAGIC     ROUND(SUM(CASE WHEN loan_status IN ('Defaulted', 'Overdue') THEN loan_amount ELSE 0 END) / 10000000, 2) AS at_risk_value_cr,
 # MAGIC     ROUND((SUM(CASE WHEN loan_status = 'Defaulted' THEN 1 ELSE 0 END) * 100.0) / COUNT(*), 2) AS default_rate_pct
-# MAGIC   FROM workspace.sap_dev.loans
+# MAGIC   FROM sap_dev.edufin_regional.loans
 # MAGIC )
 # MAGIC
 # MAGIC SELECT 

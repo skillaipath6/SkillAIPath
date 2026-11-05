@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # DBTITLE 1,CDC/SCD2 Incremental Test Suite
 # MAGIC %md
 # MAGIC # CDC/SCD2 Incremental Test Suite
@@ -12,7 +16,7 @@
 
 # COMMAND ----------
 
-# MAGIC %run ../1_Setup/1_config
+# MAGIC %run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 

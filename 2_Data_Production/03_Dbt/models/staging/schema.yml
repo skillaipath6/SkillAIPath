@@ -3,11 +3,13 @@ version: 2
 models:
   - name: stg_sales
     description: "Cleansed sales transactions from bronze layer"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['OrderID', 'BatchDate']
     columns:
       - name: OrderID
-        description: "Unique order identifier"
+        description: "Order identifier (unique within a batch day, not globally)"
         tests:
-          - unique
           - not_null
       - name: FinalPrice
         description: "Final transaction amount after discounts"
@@ -56,11 +58,13 @@ models:
 
   - name: stg_purchases
     description: "Cleansed purchase orders from bronze layer"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['PurchaseID', 'BatchDate']
     columns:
       - name: PurchaseID
-        description: "Unique purchase order identifier"
+        description: "Purchase order identifier (unique within a batch day, not globally)"
         tests:
-          - unique
           - not_null
       - name: TotalCost
         description: "Total cost of purchase order"
@@ -73,11 +77,13 @@ models:
 
   - name: stg_stock
     description: "Daily inventory snapshots from bronze layer (no business logic)"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['StockID', 'BatchDate']
     columns:
       - name: StockID
-        description: "Unique stock record identifier"
+        description: "Stock record identifier (unique within a batch day, not globally)"
         tests:
-          - unique
           - not_null
       - name: CurrentStock
         description: "Current stock quantity"

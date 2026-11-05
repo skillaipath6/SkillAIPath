@@ -77,5 +77,5 @@ SELECT
 FROM rfm_segments r
 LEFT JOIN (
   SELECT DISTINCT CustomerSK, CustomerName
-  FROM {{ ref('dim_customer') }}
+  FROM {{ source('silver', 'dim_customer') }}
 ) c ON r.CustomerSK = c.CustomerSK

@@ -18,6 +18,6 @@ SELECT
   StockQuantity AS CurrentStock,
   ReorderLevel,
   CAST(BatchDate AS DATE) AS BatchDate,
-  CURRENT_TIMESTAMP() AS LoadedAt
+  CAST(LoadedAt AS TIMESTAMP) AS LoadedAt
 FROM {{ source('bronze', 'inventory') }}
 WHERE StockQuantity >= 0

@@ -26,7 +26,7 @@ WITH current_inventory AS (
 sales_velocity AS (
   SELECT
     fs.ProductSK,
-    COUNT(DISTINCT fs.OrderID) AS OrderCount,
+    COUNT(DISTINCT fs.OrderID, fs.BatchDate) AS OrderCount, -- Phase P1: OrderID restarts daily — grain is (OrderID, BatchDate)
     SUM(fs.ProductQuantity) AS TotalSold,
     AVG(fs.ProductQuantity) AS AvgQuantityPerOrder
   FROM {{ ref('fact_sales') }} fs

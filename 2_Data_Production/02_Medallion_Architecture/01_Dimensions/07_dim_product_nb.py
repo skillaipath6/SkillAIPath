@@ -21,7 +21,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Load Config
-# MAGIC %run ../../../1_Canvas/1_Setup/1_config
+# MAGIC %run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 
@@ -85,8 +85,30 @@ else:
 # NEW DATA GENERATOR: All 3 tables (sales, stock, purchase) use same 78 products
 # No need for hybrid logic - just use products from stg_sales directly
 
-df_products = df_products \
-    .withColumn("ProductID", row_number().over(Window.orderBy("ProductName")))
+# >>> FIX (Phase P1, 2026-11-03): deterministic business key <<<
+# row_number() alone restarts at 1, so in incremental mode new products were
+# assigned ProductIDs 1..N that COLLIDE with existing rows (dim_product.ProductID
+# duplicates). Incremental runs must continue from MAX(ProductID); full loads
+# renumber 1..N deterministically (same content & order as the dbt dim_product
+# rebuild, keeping both writers SK-stable).
+if load_type == "full":
+    df_products = df_products.withColumn(
+        "ProductID", row_number().over(Window.orderBy("ProductName")))
+else:
+    _max_pid = spark.sql(
+        f"SELECT COALESCE(MAX(ProductID), 0) AS m FROM {Config.TBL_DIM_PRODUCT}"
+    ).collect()[0]['m']
+    df_products = df_products.withColumn(
+        "ProductID", row_number().over(Window.orderBy("ProductName")) + _max_pid)
+
+# >>> REMOVED (Phase P1, 2026-11-03): the "OnePlus Nord 3" -> "OnePlus Nord 3 CE" rename <<<
+# This notebook-side rename was the direct cause of ALL 200 ProductSK = -1 orphans:
+# the notebook-written dim (4AM, Job 05) contained "OnePlus Nord 3 CE" while bronze
+# facts reference "OnePlus Nord 3", and the dbt-built dim (5AM) contains the
+# un-renamed name. Facts joined at 4AM missed the product (-1): 20 rows in
+# fact_sales + 180 rows in fact_inventory (its full daily rebuild re-orphaned the
+# entire history). The name must pass through unchanged so both dim writers derive
+# identical content from bronze.
 
 product_count = df_products.count()
 print(f"\nFound {product_count:,} products from stg_sales")

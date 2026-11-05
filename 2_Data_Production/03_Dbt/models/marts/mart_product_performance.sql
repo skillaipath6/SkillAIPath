@@ -14,7 +14,7 @@ WITH product_sales AS (
   SELECT
     p.ProductSK,
     MAX(fs.ProductCategorySK) AS ProductCategorySK,
-    COUNT(DISTINCT fs.OrderID) AS TotalOrders,
+    COUNT(DISTINCT fs.OrderID, fs.BatchDate) AS TotalOrders, -- Phase P1: OrderID restarts daily — grain is (OrderID, BatchDate)
     SUM(fs.ProductQuantity) AS TotalQuantitySold,
     SUM(fs.finalprice) AS TotalRevenue,
     AVG(fs.finalprice) AS AvgSaleValue

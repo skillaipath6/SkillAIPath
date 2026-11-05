@@ -7,7 +7,7 @@
 # MAGIC %md
 # MAGIC # Customer Risk Analysis
 # MAGIC
-# MAGIC **Dataset:** `workspace.sap_main.loans`
+# MAGIC **Dataset:** `sap_dev.edufin_regional.loans`
 
 # COMMAND ----------
 
@@ -20,7 +20,7 @@
 # MAGIC   MIN(loan_amount) AS min_loan,
 # MAGIC   MAX(loan_amount) AS max_loan,
 # MAGIC   COUNT(DISTINCT CASE WHEN loan_status = 'Defaulted' THEN customer_id END) AS customers_with_defaults
-# MAGIC FROM workspace.sap_main.loans l;
+# MAGIC FROM sap_dev.edufin_regional.loans l;
 
 # COMMAND ----------
 
@@ -37,8 +37,8 @@
 # MAGIC   COUNT(l.loan_id) AS total_customers,
 # MAGIC   COUNT(CASE WHEN l.loan_status = 'Defaulted' THEN 1 END) AS defaulted_count,
 # MAGIC   ROUND((COUNT(CASE WHEN l.loan_status = 'Defaulted' THEN 1 END) * 100) / COUNT(*), 2) AS default_rate_pct
-# MAGIC FROM workspace.sap_main.loans l
-# MAGIC JOIN workspace.sap_main.customers c ON l.customer_id = c.customer_id
+# MAGIC FROM sap_dev.edufin_regional.loans l
+# MAGIC JOIN sap_dev.edufin_national.customers c ON l.customer_id = c.customer_id
 # MAGIC GROUP BY cibil_segment
 # MAGIC ORDER BY 
 # MAGIC   CASE 
@@ -65,8 +65,8 @@
 # MAGIC   COUNT(CASE WHEN l.loan_status = 'Defaulted' THEN 1 END) AS defaulted_count,
 # MAGIC   ROUND((COUNT(CASE WHEN l.loan_status = 'Defaulted' THEN 1 END) * 100.0) / COUNT(*), 2) AS default_rate_pct,
 # MAGIC   ROUND(SUM(l.loan_amount) / 10000000, 2) AS total_exposure_cr
-# MAGIC FROM workspace.sap_main.loans l
-# MAGIC JOIN workspace.sap_main.customers c ON l.customer_id = c.customer_id
+# MAGIC FROM sap_dev.edufin_regional.loans l
+# MAGIC JOIN sap_dev.edufin_national.customers c ON l.customer_id = c.customer_id
 # MAGIC GROUP BY age_segment
 # MAGIC ORDER BY 
 # MAGIC   CASE 
@@ -92,8 +92,8 @@
 # MAGIC   SUM(CASE WHEN l.loan_status = 'Defaulted' THEN 1 ELSE 0 END) AS defaulted_count,
 # MAGIC   ROUND((SUM(CASE WHEN l.loan_status = 'Defaulted' THEN 1 ELSE 0 END) * 100.0) / COUNT(*), 2) AS default_rate_pct,
 # MAGIC   ROUND(SUM(CASE WHEN l.loan_status = 'Defaulted' THEN l.loan_amount ELSE 0 END) / 100000, 2) AS defaulted_amount_cr
-# MAGIC FROM workspace.sap_main.loans l
-# MAGIC JOIN workspace.sap_main.customers c ON l.customer_id = c.customer_id
+# MAGIC FROM sap_dev.edufin_regional.loans l
+# MAGIC JOIN sap_dev.edufin_national.customers c ON l.customer_id = c.customer_id
 # MAGIC GROUP BY income_segment
 # MAGIC ORDER BY defaulted_amount_cr DESC;
 
@@ -112,8 +112,8 @@
 # MAGIC   COUNT(*) AS total_loans,
 # MAGIC   COUNT(CASE WHEN l.loan_status = 'Defaulted' THEN 1 END) AS defaulted_count,
 # MAGIC   ROUND((COUNT(CASE WHEN l.loan_status = 'Defaulted' THEN 1 END) * 100.0) / COUNT(*), 2) AS default_rate_pct
-# MAGIC FROM workspace.sap_main.loans l
-# MAGIC JOIN workspace.sap_main.customers c ON l.customer_id = c.customer_id
+# MAGIC FROM sap_dev.edufin_regional.loans l
+# MAGIC JOIN sap_dev.edufin_national.customers c ON l.customer_id = c.customer_id
 # MAGIC GROUP BY c.employment_type, income_segment
 # MAGIC ORDER BY default_rate_pct DESC;
 
@@ -131,8 +131,8 @@
 # MAGIC     (SUM(CASE WHEN l.loan_status = 'Defaulted' THEN l.loan_amount ELSE 0 END) / 100000) + 
 # MAGIC     (800 - MIN(c.cibil_score)) / 10
 # MAGIC   ) AS priority_score
-# MAGIC FROM workspace.sap_main.loans l
-# MAGIC JOIN workspace.sap_main.customers c ON l.customer_id = c.customer_id
+# MAGIC FROM sap_dev.edufin_regional.loans l
+# MAGIC JOIN sap_dev.edufin_national.customers c ON l.customer_id = c.customer_id
 # MAGIC GROUP BY l.customer_id
 # MAGIC HAVING default_count > 0
 # MAGIC ORDER BY priority_score DESC

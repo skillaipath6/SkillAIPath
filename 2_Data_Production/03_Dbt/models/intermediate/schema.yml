@@ -40,11 +40,13 @@ models:
 
   - name: int_sales_enriched
     description: "Sales transactions enriched with customer and product context (incremental)"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['OrderID', 'BatchDate']
     columns:
       - name: OrderID
-        description: "Unique order identifier"
+        description: "Order identifier (unique per load, not globally)"
         tests:
-          - unique
           - not_null
       - name: customer_segment
         description: "Customer segment at time of purchase"
@@ -76,25 +78,10 @@ models:
       - name: DayName
         description: "Day name (Monday, Tuesday, etc.)"
 
-  - name: dim_customer
-    description: "Customer dimension (SCD Type 1) with enriched attributes"
-    columns:
-      - name: CustomerSK
-        description: "Customer surrogate key (sequential)"
-        tests:
-          - unique
-          - not_null
-      - name: CustomerID
-        description: "Customer business key"
-      - name: CustomerName
-        description: "Customer name"
-        tests:
-          - not_null
-      - name: CustomerTier
-        description: "Customer tier (VIP/Regular/New)"
-      - name: IsCurrent
-        description: "Is customer currently active"
-
+  # dim_customer model block REMOVED (PhaseC2): CDC-owned by 06_customer_scd2_cdc
+  # (Job 05). It is declared as a SOURCE in staging/_sources.yml (with SK unique/
+  # not_null + CustomerID not_null tests); dbt reads it, never rebuilds it. The
+  # run-level shield is the --exclude dim_customer in StartHere_DBT.
   - name: dim_product
     description: "Product dimension with category and pricing attributes"
     columns:
@@ -145,18 +132,20 @@ models:
   # Fact Tables (Silver Layer)
   - name: fact_sales
     description: "Sales fact table with dimensional keys (incremental)"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['OrderID', 'BatchDate']
     columns:
       - name: OrderID
-        description: "Order identifier"
+        description: "Order identifier (unique within a batch day, not globally)"
         tests:
-          - unique
           - not_null
       - name: CustomerSK
         description: "Foreign key to dim_customer"
         tests:
           - not_null
           - relationships:
-              to: ref('dim_customer')
+              to: source('silver', 'dim_customer')
               field: CustomerSK
       - name: ProductSK
         description: "Foreign key to dim_product"

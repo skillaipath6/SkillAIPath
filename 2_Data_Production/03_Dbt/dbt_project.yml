@@ -39,7 +39,6 @@ models:
     intermediate:
       +schema: silver
       +materialized: incremental
-      +unique_key: 'OrderID'
       +incremental_strategy: merge
       +on_schema_change: append_new_columns
       +tags: ["intermediate", "silver"]

@@ -2405,11 +2405,11 @@ print("\n" + "="*60)
 # MAGIC ## Get Support
 # MAGIC
 # MAGIC **Questions or progress updates?**  
-# MAGIC Reach out to Graphy community:  
+# MAGIC Reach out to community community:  
 # MAGIC https://veereshgendle.graphy.com/t/u/community-chat?entityExternalId=68da52346013d27142f309b6&channel=question-answers
 # MAGIC
 # MAGIC **Ready for EduFin?**  
-# MAGIC Reach out on WhatsApp:  
+# MAGIC Reach out on team chat:  
 # MAGIC https://skillaipath.com/edufin-sql
 # MAGIC
 # MAGIC ---

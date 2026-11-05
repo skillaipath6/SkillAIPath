@@ -113,14 +113,22 @@
         "      INNER JOIN sap_dev.silver.dim_date dd\n",
         "        ON fs.OrderDateID = dd.DateID\n",
         "  WHERE\n",
-        "    dd.Date = CURRENT_DATE()\n",
+        "    dd.Date\n",
+        "      = (\n",
+        "        SELECT\n",
+        "          MAX(dd2.Date)\n",
+        "        FROM\n",
+        "          sap_dev.silver.fact_sales fs2\n",
+        "            INNER JOIN sap_dev.silver.dim_date dd2\n",
+        "              ON fs2.OrderDateID = dd2.DateID\n",
+        "      )\n",
         ")\n",
         "SELECT\n",
         "  ts.revenue_today,\n",
         "  ts.orders_today,\n",
         "  ld.latest_sales_date,\n",
         "  CASE\n",
-        "    WHEN ts.orders_today = 0 THEN 'No sales today'\n",
+        "    WHEN ts.orders_today = 0 THEN 'No sales data available'\n",
         "    ELSE CAST(ts.revenue_today AS STRING)\n",
         "  END AS revenue_today_display\n",
         "FROM\n",
@@ -428,8 +436,8 @@
                   "datasetName": "sales_kpi_today",
                   "fields": [
                     {
-                      "name": "revenue_today_display",
-                      "expression": "`revenue_today_display`"
+                      "name": "revenue_today",
+                      "expression": "`revenue_today`"
                     }
                   ],
                   "disaggregated": true
@@ -437,16 +445,31 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Revenue Today",
                 "showTitle": true,
-                "description": "Latest sales: Aug 8, 2026"
+                "title": {
+                  "value": "Revenue Today",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Latest available sales",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "revenue_today_display"
+                  "fieldName": "revenue_today",
+                  "format": {
+                    "type": "number-currency",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 2
+                    },
+                    "currencyCode": "INR"
+                  }
                 }
               },
               "data": {
@@ -480,25 +503,31 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Revenue MTD",
                 "showTitle": true,
-                "description": "MoM: -66.1%"
+                "title": {
+                  "value": "Revenue MTD",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Month-to-date vs prior month",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "revenue_mtd",
                   "format": {
-                    "type": "number-plain",
+                    "type": "number-currency",
                     "abbreviation": "compact",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 1
-                    }
-                  },
-                  "formatTemplate": "₹{{ @formatted }}"
+                      "places": 2
+                    },
+                    "currencyCode": "INR"
+                  }
                 }
               },
               "data": {
@@ -532,24 +561,29 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Orders Today",
                 "showTitle": true,
-                "description": "Latest sales: Aug 8, 2026"
+                "title": {
+                  "value": "Orders Today",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Latest available sales",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
                   "fieldName": "orders_today",
                   "format": {
-                    "type": "alias",
-                    "mappings": [
-                      {
-                        "value": "0",
-                        "alias": "No data"
-                      }
-                    ]
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 0
+                    }
                   }
                 }
               },
@@ -584,12 +618,18 @@
               }
             ],
             "spec": {
-              "version": 2,
               "frame": {
-                "title": "Orders MTD",
                 "showTitle": true,
-                "description": "MoM: -66.4%"
+                "title": {
+                  "value": "Orders MTD",
+                  "fields": []
+                },
+                "description": {
+                  "value": "Month-to-date vs prior month",
+                  "fields": []
+                }
               },
+              "version": 2,
               "widgetType": "counter",
               "encodings": {
                 "value": {
@@ -645,14 +685,14 @@
                 "value": {
                   "fieldName": "avg_order_value",
                   "format": {
-                    "type": "number-plain",
-                    "abbreviation": "compact",
+                    "type": "number-currency",
+                    "abbreviation": "none",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 1
-                    }
-                  },
-                  "formatTemplate": "₹{{ @formatted }}"
+                      "places": 2
+                    },
+                    "currencyCode": "INR"
+                  }
                 }
               },
               "data": {
@@ -692,7 +732,7 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Daily Sales Trend — Last 30 Days",
+                "title": "Daily Revenue Trend (Last 30 Days)",
                 "showTitle": true
               },
               "widgetType": "line",
@@ -706,7 +746,16 @@
                 },
                 "y": {
                   "fieldName": "sum(daily_revenue)",
-                  "displayName": "daily_revenue",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "INR",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 2
+                    }
+                  },
+                  "displayName": "Revenue",
                   "scale": {
                     "type": "quantitative"
                   }
@@ -749,14 +798,14 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Top 10 Cities by Revenue",
+                "title": "Top Cities by Revenue",
                 "showTitle": true
               },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "city",
-                  "displayName": "city",
+                  "displayName": "City",
                   "scale": {
                     "type": "categorical"
                   }
@@ -769,18 +818,17 @@
                     "abbreviation": "compact",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 1
+                      "places": 2
                     }
                   },
-                  "formatTemplate": "₹{{ @formatted }}",
-                  "displayName": "revenue",
+                  "displayName": "Revenue",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
                 "color": {
                   "fieldName": "city",
-                  "displayName": "city",
+                  "displayName": "City",
                   "scale": {
                     "type": "categorical"
                   }
@@ -823,14 +871,14 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Top 10 Products by Revenue",
+                "title": "Top Products by Revenue",
                 "showTitle": true
               },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "product",
-                  "displayName": "product",
+                  "displayName": "Product",
                   "scale": {
                     "type": "categorical"
                   }
@@ -843,18 +891,17 @@
                     "abbreviation": "compact",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 1
+                      "places": 2
                     }
                   },
-                  "formatTemplate": "₹{{ @formatted }}",
-                  "displayName": "revenue",
+                  "displayName": "Revenue",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
                 "color": {
                   "fieldName": "product",
-                  "displayName": "product",
+                  "displayName": "Product",
                   "scale": {
                     "type": "categorical"
                   }
@@ -897,14 +944,14 @@
             "spec": {
               "version": 3,
               "frame": {
-                "title": "Top 10 Agents by Revenue",
+                "title": "Top Performing Agents",
                 "showTitle": true
               },
               "widgetType": "bar",
               "encodings": {
                 "x": {
                   "fieldName": "agent",
-                  "displayName": "agent",
+                  "displayName": "Agent",
                   "scale": {
                     "type": "categorical"
                   }
@@ -917,18 +964,17 @@
                     "abbreviation": "compact",
                     "decimalPlaces": {
                       "type": "exact",
-                      "places": 1
+                      "places": 2
                     }
                   },
-                  "formatTemplate": "₹{{ @formatted }}",
-                  "displayName": "revenue",
+                  "displayName": "Revenue",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
                 "color": {
                   "fieldName": "agent",
-                  "displayName": "agent",
+                  "displayName": "Agent",
                   "scale": {
                     "type": "categorical"
                   }
@@ -967,8 +1013,9 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Top 10 City Revenue Contribution %",
-                "showTitle": true
+                "title": "Top 10 Cities Contribution",
+                "showTitle": true,
+                "description": "% of total revenue"
               },
               "widgetType": "counter",
               "encodings": {
@@ -1018,8 +1065,9 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Top 10 Product Revenue Contribution %",
-                "showTitle": true
+                "title": "Top 10 Products Contribution",
+                "showTitle": true,
+                "description": "% of total revenue"
               },
               "widgetType": "counter",
               "encodings": {
@@ -1069,8 +1117,9 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Top 10 Agent Revenue Contribution %",
-                "showTitle": true
+                "title": "Top 10 Agents Contribution",
+                "showTitle": true,
+                "description": "% of total revenue"
               },
               "widgetType": "counter",
               "encodings": {
@@ -1109,34 +1158,6 @@
                   "datasetName": "performance_detail",
                   "fields": [
                     {
-                      "name": "date",
-                      "expression": "`date`"
-                    },
-                    {
-                      "name": "product",
-                      "expression": "`product`"
-                    },
-                    {
-                      "name": "category",
-                      "expression": "`category`"
-                    },
-                    {
-                      "name": "agent",
-                      "expression": "`agent`"
-                    },
-                    {
-                      "name": "city",
-                      "expression": "`city`"
-                    },
-                    {
-                      "name": "orders",
-                      "expression": "`orders`"
-                    },
-                    {
-                      "name": "units_sold",
-                      "expression": "`units_sold`"
-                    },
-                    {
                       "name": "revenue",
                       "expression": "`revenue`"
                     },
@@ -1152,33 +1173,12 @@
             "spec": {
               "version": 2,
               "frame": {
-                "title": "Sales Performance Detail",
+                "title": "Detailed Sales Performance",
                 "showTitle": true
               },
               "widgetType": "table",
               "encodings": {
                 "columns": [
-                  {
-                    "fieldName": "date"
-                  },
-                  {
-                    "fieldName": "product"
-                  },
-                  {
-                    "fieldName": "category"
-                  },
-                  {
-                    "fieldName": "agent"
-                  },
-                  {
-                    "fieldName": "city"
-                  },
-                  {
-                    "fieldName": "orders"
-                  },
-                  {
-                    "fieldName": "units_sold"
-                  },
                   {
                     "fieldName": "revenue",
                     "format": {
@@ -1187,23 +1187,23 @@
                       "abbreviation": "compact",
                       "decimalPlaces": {
                         "type": "exact",
-                        "places": 1
+                        "places": 2
                       }
                     },
-                    "formatTemplate": "₹{{ @formatted }}"
+                    "displayName": "Revenue"
                   },
                   {
                     "fieldName": "aov",
                     "format": {
                       "type": "number-currency",
                       "currencyCode": "INR",
-                      "abbreviation": "compact",
+                      "abbreviation": "none",
                       "decimalPlaces": {
                         "type": "exact",
-                        "places": 1
+                        "places": 2
                       }
                     },
-                    "formatTemplate": "₹{{ @formatted }}"
+                    "displayName": "AOV"
                   }
                 ]
               },
@@ -1447,22 +1447,73 @@
   ],
   "uiSettings": {
     "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F8FAFC",
+        "dark": "#0F172A"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#1E293B"
+      },
+      "widgetBorderColor": {
+        "light": "#E2E8F0",
+        "dark": "#334155"
+      },
+      "selectionColor": {
+        "light": "#6366F1",
+        "dark": "#6366F1"
+      },
+      "visualizationColors": [
+        "#6366F1",
+        "#8B5CF6",
+        "#EC4899",
+        "#F59E0B",
+        "#10B981",
+        "#06B6D4",
+        "#3B82F6",
+        "#A855F7",
+        "#EF4444",
+        "#84CC16"
+      ],
       "widgetHeaderAlignment": "LEFT",
+      "fontFamily": "Inter",
       "widgetPadding": 16,
-      "widgetMargin": 8,
+      "widgetMargin": 12,
       "widgetCornerRadius": 8,
+      "widgetShadow": 50,
       "fontSettings": {
         "base": {
           "fontFamily": "Inter",
+          "fontColor": {
+            "light": "#1E293B",
+            "dark": "#E2E8F0"
+          },
           "fontSize": 13
         },
         "widgetTitle": {
           "fontFamily": "Inter",
-          "fontSize": 14,
+          "fontColor": {
+            "light": "#0F172A",
+            "dark": "#F1F5F9"
+          },
+          "fontSize": 15,
           "fontWeight": 600
+        },
+        "fieldTitle": {
+          "textCase": "TEXT_CASE_UPPERCASE",
+          "fontColor": {
+            "light": "#64748B",
+            "dark": "#94A3B8"
+          },
+          "fontSize": 11,
+          "fontWeight": 500
         },
         "fieldValue": {
           "fontFamily": "Inter",
+          "fontColor": {
+            "light": "#1E293B",
+            "dark": "#E2E8F0"
+          },
           "fontSize": 13,
           "fontWeight": 500
         }

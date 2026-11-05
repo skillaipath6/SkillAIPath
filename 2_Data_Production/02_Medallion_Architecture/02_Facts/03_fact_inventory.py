@@ -21,7 +21,7 @@
 # COMMAND ----------
 
 # DBTITLE 1,Load Config
-# MAGIC %run ../../../1_Canvas/1_Setup/1_config
+# MAGIC %run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 

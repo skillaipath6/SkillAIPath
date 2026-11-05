@@ -53,7 +53,7 @@ from datetime import datetime
 from pyspark.sql import functions as F
 
 # Import config using %run (works across dev/main/uat environments)
-%run ../../../1_Canvas/1_Setup/1_config
+%run ../../../1_Canvas/1_Setup/1_Config
 
 # Widget for load type (full or incremental)
 dbutils.widgets.dropdown("load_type", "full", ["full", "incremental"], "Load Type")

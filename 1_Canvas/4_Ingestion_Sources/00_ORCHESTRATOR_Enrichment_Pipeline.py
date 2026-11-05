@@ -1,143 +1,118 @@
 # Databricks notebook source
-# DBTITLE 1,Enrichment Pipeline Orchestrator - COMPLETE BRONZE INGESTION
+# /// script
+# [tool.databricks.environment]
+# environment_version = "6"
+# ///
+# DBTITLE 1,Enrichment Pipeline Orchestrator - Parallel Execution
 # MAGIC %md
-# MAGIC # External Enrichment Pipeline - Complete Orchestrator
+# MAGIC # External Enrichment Pipeline - Complete Orchestrator (Parallel)
 # MAGIC
-# MAGIC **Purpose:** Orchestrate all bronze-layer enrichment data ingestion
+# MAGIC **Purpose:** Orchestrate full Bronze → Silver → Gold enrichment pipeline with parallel execution
 # MAGIC
-# MAGIC **Pipeline Stages:**
+# MAGIC **Bronze Layer (4 stages, parallel):**
 # MAGIC 1. **Supplier Network** (100K+ suppliers, 50K+ parts, 500K+ relationships)
 # MAGIC 2. **Weather Data** (55K+ daily weather records, 30 cities, 5 years)
 # MAGIC 3. **Exchange Rates & Commodities** (73K+ FX/commodity prices, 5 years)
 # MAGIC 4. **Logistics Deliveries** (500K+ delivery transactions, 2 years)
 # MAGIC
-# MAGIC **Total Volume:** ~1.3 Million enrichment records
+# MAGIC **Silver Layer (2 stages, parallel):**
+# MAGIC 5. **Supplier Cost Benchmark** - Compare actual costs vs market benchmarks
+# MAGIC 6. **Weather Sales Correlation** - Join weather data with sales facts
 # MAGIC
-# MAGIC **Schema Convention:** All bronze tables use `sap_dev.bronze.ext_*` naming
+# MAGIC **Gold Layer (2 stages, parallel):**
+# MAGIC 7. **Supplier Performance Analytics** - Scorecard + cost optimization marts
+# MAGIC 8. **Weather Impact Analytics** - Weather-sensitive products + sales impact
 # MAGIC
-# MAGIC **Execution:** Run all cells sequentially or use Databricks Workflows
+# MAGIC **Execution:** All stages within each layer run in parallel using ThreadPoolExecutor. Layers execute sequentially (Bronze → Silver → Gold).
 
 # COMMAND ----------
 
 # DBTITLE 1,Load Config
-%run ../../1_Canvas/1_Setup/1_config
+# MAGIC %run ../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 
 # DBTITLE 1,Import Libraries
 from pyspark.sql import functions as F
 from datetime import datetime
+import concurrent.futures
+import time
 
 print("="*80)
-print("ENRICHMENT PIPELINE ORCHESTRATOR - PRODUCTION-GRADE")
+print("ENRICHMENT PIPELINE ORCHESTRATOR - PARALLEL EXECUTION")
 print("="*80)
 print(f"Target Catalog: {Config.CATALOG}")
-print(f"Target Schema: {Config.SCHEMA_BRONZE}")
 print(f"Timestamp: {datetime.now()}")
 print("="*80)
 
 # COMMAND ----------
 
-# DBTITLE 1,STAGE 1: Ingest Supplier Network (100K+ Suppliers)
+# DBTITLE 1,BRONZE LAYER - Parallel Ingestion (4 stages)
 print("\n" + "="*80)
-print("STAGE 1: SUPPLIER NETWORK INGESTION")
+print("BRONZE LAYER - PARALLEL INGESTION (4 stages)")
 print("="*80)
-print("Executing: 01_ingest_tpch_suppliers.py")
-print("Expected Output: ~650K records (suppliers + parts + relationships)")
+print("Running all 4 ingestion stages in parallel...")
 print("="*80)
 
-%run ./01_ingest_tpch_suppliers
+bronze_start = time.time()
 
-print("\n✅ STAGE 1 COMPLETE")
+def run_bronze_stage(notebook_name, stage_label):
+    print(f"  [{stage_label}] Starting {notebook_name}...")
+    dbutils.notebook.run(f"./{notebook_name}", timeout_seconds=1200)
+    print(f"  [{stage_label}] Complete")
+    return stage_label
+
+bronze_stages = [
+    ("01_Ingest_Tpch_Suppliers", "Suppliers"),
+    ("02_Ingest_Weather_Data", "Weather"),
+    ("07_Ingest_Exchange_Rates", "FX Rates"),
+    ("08_Ingest_Logistics", "Logistics"),
+]
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    futures = {
+        executor.submit(run_bronze_stage, nb, label): label
+        for nb, label in bronze_stages
+    }
+    for future in concurrent.futures.as_completed(futures):
+        label = futures[future]
+        try:
+            future.result()
+        except Exception as e:
+            print(f"  [{label}] FAILED: {e}")
+            raise
+
+bronze_elapsed = time.time() - bronze_start
+print(f"\n✅ BRONZE LAYER COMPLETE - All 4 stages finished in {bronze_elapsed:.1f}s")
+
+# Count records
 supplier_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_tpch_suppliers").count()
 parts_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_tpch_parts").count()
 partsupp_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_tpch_partsupp").count()
-print(f"Suppliers: {supplier_count:,}")
-print(f"Parts: {parts_count:,}")
-print(f"Relationships: {partsupp_count:,}")
-print(f"Total: {supplier_count + parts_count + partsupp_count:,}")
-
-# COMMAND ----------
-
-# DBTITLE 1,STAGE 2: Ingest Weather Data (55K+ Records)
-print("\n" + "="*80)
-print("STAGE 2: WEATHER DATA INGESTION")
-print("="*80)
-print("Executing: 02_ingest_weather_data.py")
-print("Expected Output: ~55K records (30 cities × 5 years × 365 days)")
-print("="*80)
-
-%run ./02_ingest_weather_data
-
-print("\n✅ STAGE 2 COMPLETE")
 weather_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_weather_daily").count()
-print(f"Weather Records: {weather_count:,}")
-
-# COMMAND ----------
-
-# DBTITLE 1,STAGE 3: Ingest Exchange Rates & Commodities (73K+ Records)
-print("\n" + "="*80)
-print("STAGE 3: EXCHANGE RATES & COMMODITIES INGESTION")
-print("="*80)
-print("Executing: 07_ingest_exchange_rates.py")
-print("Expected Output: ~73K records (30 FX + 10 commodities × 5 years)")
-print("="*80)
-
-%run ./07_ingest_exchange_rates
-
-print("\n✅ STAGE 3 COMPLETE")
 fx_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_exchange_rates").count()
-print(f"FX & Commodity Records: {fx_count:,}")
-
-# COMMAND ----------
-
-# DBTITLE 1,STAGE 4: Ingest Logistics Deliveries (500K+ Records)
-print("\n" + "="*80)
-print("STAGE 4: LOGISTICS DELIVERIES INGESTION")
-print("="*80)
-print("Executing: 08_ingest_logistics.py")
-print("Expected Output: ~500K records (Indian delivery transactions, 2 years)")
-print("="*80)
-
-%run ./08_ingest_logistics
-
-print("\n✅ STAGE 4 COMPLETE")
 logistics_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_logistics_deliveries").count()
-print(f"Logistics Records: {logistics_count:,}")
+print(f"  Suppliers: {supplier_count:,} | Parts: {parts_count:,} | PartSupp: {partsupp_count:,}")
+print(f"  Weather: {weather_count:,} | FX: {fx_count:,} | Logistics: {logistics_count:,}")
 
 # COMMAND ----------
 
-# DBTITLE 1,Pipeline Summary & Validation
+# DBTITLE 1,Bronze Layer Summary
 print("\n" + "="*80)
-print("✅ ENRICHMENT PIPELINE COMPLETE - ALL STAGES SUCCESSFUL")
+print("✅ BRONZE LAYER SUMMARY")
 print("="*80)
 
-# Calculate totals
 total_supplier_network = supplier_count + parts_count + partsupp_count
 total_all = total_supplier_network + weather_count + fx_count + logistics_count
 
-print(f"\n📊 INGESTION SUMMARY:")
-print(f"  Stage 1 - Supplier Network:  {total_supplier_network:>10,} records")
-print(f"  Stage 2 - Weather Data:      {weather_count:>10,} records")
-print(f"  Stage 3 - FX & Commodities:  {fx_count:>10,} records")
-print(f"  Stage 4 - Logistics:         {logistics_count:>10,} records")
+print(f"\n📊 BRONZE INGESTION SUMMARY ({bronze_elapsed:.1f}s):")
+print(f"  Suppliers+Parts+PartSupp: {total_supplier_network:>10,} records")
+print(f"  Weather Data:            {weather_count:>10,} records")
+print(f"  FX & Commodities:         {fx_count:>10,} records")
+print(f"  Logistics:                {logistics_count:>10,} records")
 print(f"  " + "-"*40)
-print(f"  TOTAL ENRICHMENT RECORDS:    {total_all:>10,}")
-
-print(f"\n📁 BRONZE TABLES CREATED:")
-print(f"  {Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_tpch_suppliers")
-print(f"  {Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_tpch_parts")
-print(f"  {Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_tpch_partsupp")
-print(f"  {Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_weather_daily")
-print(f"  {Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_exchange_rates")
-print(f"  {Config.CATALOG}.{Config.SCHEMA_BRONZE}.ext_logistics_deliveries")
-
-print(f"\n⏱️  Pipeline Completed: {datetime.now()}")
-print(f"\n💡 NEXT STEPS:")
-print(f"  1. Run Silver layer notebooks (03_silver_supplier_benchmark.py, etc.)")
-print(f"  2. Run Gold layer notebooks (05_gold_supplier_analytics.py, etc.)")
-print(f"  3. Schedule this orchestrator as Databricks Job (daily/weekly refresh)")
-print(f"  4. Set up quality monitoring and alerting")
+print(f"  TOTAL BRONZE RECORDS:     {total_all:>10,}")
+print(f"\n⏱️  Bronze layer completed in {bronze_elapsed:.1f}s (4 stages in parallel)")
 print("="*80)
 
 # COMMAND ----------
@@ -182,3 +157,103 @@ print("\n✅ DATA QUALITY VALIDATION COMPLETE")
 
 # COMMAND ----------
 
+# DBTITLE 1,SILVER LAYER - Parallel Execution (2 stages)
+print("\n" + "="*80)
+print("SILVER LAYER - PARALLEL EXECUTION (2 stages)")
+print("="*80)
+print("Running both silver notebooks in parallel...")
+print("="*80)
+
+silver_start = time.time()
+
+def run_silver_stage(notebook_name, stage_label):
+    print(f"  [{stage_label}] Starting {notebook_name}...")
+    dbutils.notebook.run(f"./{notebook_name}", timeout_seconds=1200)
+    print(f"  [{stage_label}] Complete")
+    return stage_label
+
+silver_stages = [
+    ("03_Silver_Supplier_Benchmark", "Supplier Benchmark"),
+    ("04_Silver_Weather_Sales", "Weather Sales"),
+]
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    futures = {
+        executor.submit(run_silver_stage, nb, label): label
+        for nb, label in silver_stages
+    }
+    for future in concurrent.futures.as_completed(futures):
+        label = futures[future]
+        try:
+            future.result()
+        except Exception as e:
+            print(f"  [{label}] FAILED: {e}")
+            raise
+
+silver_elapsed = time.time() - silver_start
+print(f"\n✅ SILVER LAYER COMPLETE - Both stages finished in {silver_elapsed:.1f}s")
+
+silver_benchmark_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_SILVER}.ext_supplier_cost_benchmark").count()
+silver_alt_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_SILVER}.ext_product_sourcing_alternatives").count()
+silver_weather_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_SILVER}.ext_weather_sales_correlation").count()
+print(f"  Supplier Benchmarks: {silver_benchmark_count:,} | Alternatives: {silver_alt_count:,} | Weather Correlations: {silver_weather_count:,}")
+
+# COMMAND ----------
+
+# DBTITLE 1,GOLD LAYER - Parallel Execution (2 stages)
+print("\n" + "="*80)
+print("GOLD LAYER - PARALLEL EXECUTION (2 stages)")
+print("="*80)
+print("Running both gold notebooks in parallel...")
+print("="*80)
+
+gold_start = time.time()
+
+def run_gold_stage(notebook_name, stage_label):
+    print(f"  [{stage_label}] Starting {notebook_name}...")
+    dbutils.notebook.run(f"./{notebook_name}", timeout_seconds=1200)
+    print(f"  [{stage_label}] Complete")
+    return stage_label
+
+gold_stages = [
+    ("05_Gold_Supplier_Analytics", "Supplier Analytics"),
+    ("06_Gold_Weather_Analytics", "Weather Analytics"),
+]
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    futures = {
+        executor.submit(run_gold_stage, nb, label): label
+        for nb, label in gold_stages
+    }
+    for future in concurrent.futures.as_completed(futures):
+        label = futures[future]
+        try:
+            future.result()
+        except Exception as e:
+            print(f"  [{label}] FAILED: {e}")
+            raise
+
+gold_elapsed = time.time() - gold_start
+print(f"\n✅ GOLD LAYER COMPLETE - Both stages finished in {gold_elapsed:.1f}s")
+
+gold_perf_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_GOLD}.mart_supplier_performance").count()
+gold_opt_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_GOLD}.mart_cost_optimization_opportunities").count()
+gold_impact_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_GOLD}.mart_weather_sales_impact").count()
+gold_sensitive_count = spark.table(f"{Config.CATALOG}.{Config.SCHEMA_GOLD}.mart_weather_sensitive_products").count()
+print(f"  Supplier Performance: {gold_perf_count:,} | Cost Opt: {gold_opt_count:,}")
+print(f"  Weather Impact: {gold_impact_count:,} | Sensitive Products: {gold_sensitive_count:,}")
+
+# COMMAND ----------
+
+# DBTITLE 1,Full Pipeline Summary
+print("\n" + "="*80)
+print("✅ FULL ENRICHMENT PIPELINE COMPLETE - ALL 8 STAGES (PARALLEL)")
+print("="*80)
+print(f"\n📊 FULL PIPELINE SUMMARY:")
+print(f"  Bronze: {total_all:,} records ({bronze_elapsed:.1f}s - 4 parallel)")
+print(f"  Silver: {silver_benchmark_count:,} benchmarks + {silver_alt_count:,} alternatives + {silver_weather_count:,} weather correlations ({silver_elapsed:.1f}s - 2 parallel)")
+print(f"  Gold:   {gold_perf_count:,} supplier scores + {gold_opt_count:,} cost opportunities + {gold_impact_count:,} weather impacts + {gold_sensitive_count:,} sensitive products ({gold_elapsed:.1f}s - 2 parallel)")
+total_elapsed = bronze_elapsed + silver_elapsed + gold_elapsed
+print(f"\n  Total pipeline time: {total_elapsed:.1f}s")
+print(f"  Completed at: {datetime.now()}")
+print("\n" + "="*80)

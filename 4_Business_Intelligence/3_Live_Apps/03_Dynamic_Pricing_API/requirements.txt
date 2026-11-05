@@ -1,6 +1,0 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.0
-databricks-sql-connector==2.9.3
-databricks-sdk==0.128.0
-psycopg2-binary==2.9.9

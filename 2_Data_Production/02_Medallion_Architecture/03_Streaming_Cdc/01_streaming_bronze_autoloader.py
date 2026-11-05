@@ -744,7 +744,7 @@ print("\nAuto Loader = 36x faster + 97% cheaper + schema evolution")
 # MAGIC * BLOCKED (Missing Dependencies): 13 notebooks (76%)
 # MAGIC * STANDALONE (Self-Contained): 3+ notebooks (18%)
 # MAGIC
-# MAGIC **Critical Finding:** Missing `../1_Setup/1_config.py` file blocks 76% of implementation notebooks.
+# MAGIC **Critical Finding:** Missing `../1_Setup/1_Config.py` file blocks 76% of implementation notebooks.
 # MAGIC
 # MAGIC **Code Quality:** High - All notebooks show production-grade patterns, comprehensive documentation, interview positioning.
 # MAGIC
@@ -772,7 +772,7 @@ print("\nAuto Loader = 36x faster + 97% cheaper + schema evolution")
 # MAGIC * STATUS: BLOCKED
 # MAGIC * BLOCKER: ModuleNotFoundError: No module named 'config'
 # MAGIC * MISSING:
-# MAGIC   * `../1_Setup/1_config.py`
+# MAGIC   * `../1_Setup/1_Config.py`
 # MAGIC   * CDC source table `{Config.SCHEMA_BRONZE}.cdc_customers`
 # MAGIC   * Watermark table `sap.cdc_watermarks`
 # MAGIC * CODE QUALITY: Excellent
@@ -927,7 +927,7 @@ print("\nAuto Loader = 36x faster + 97% cheaper + schema evolution")
 # MAGIC
 # MAGIC ### Primary Blocker: Missing config.py
 # MAGIC
-# MAGIC **File:** `../1_Setup/1_config.py`  
+# MAGIC **File:** `../1_Setup/1_Config.py`  
 # MAGIC **Impact:** 13 of 17 notebooks (76%)  
 # MAGIC **Expected Contents:**
 # MAGIC
@@ -1023,7 +1023,7 @@ print("\nAuto Loader = 36x faster + 97% cheaper + schema evolution")
 # MAGIC ### IMMEDIATE ACTIONS (Priority 1)
 # MAGIC
 # MAGIC 1. CREATE config.py file
-# MAGIC    * Location: `../1_Setup/1_config.py`
+# MAGIC    * Location: `../1_Setup/1_Config.py`
 # MAGIC    * Content: Table name constants (see Root Cause Analysis above)
 # MAGIC    * Impact: Unlocks 13 blocked notebooks
 # MAGIC

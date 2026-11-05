@@ -38,7 +38,7 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 # DBTITLE 1,Configuration & Setup
-# MAGIC %run ../../../1_Canvas/1_Setup/1_config
+# MAGIC %run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 

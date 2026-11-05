@@ -1,17 +1,4 @@
-# Exclude Genie Space files (workspace-native assets not supported in Git)
-*.geniespace.json
 
-# MLflow experiments and models (workspace-native assets not supported in Git)
-*_experiment
-*_prediction_experiment
-
-# MLflow experiment artifacts - specific directories
-churn_prediction_experiment/
-next_purchase_prediction_experiment/
-product_recommendation/
-3_AI_Platform/1_MLOps/product_recommendation
-*.backup
-__pycache__/
-*.pyc
-*.backup_*
-*.last_run_watermark
+# Files with secrets - excluded for GitHub Push Protection
+**/diesel-ellipse-505304-d0-f359e9488ed5.json
+3_AI_Platform/3_AI_Agents/02_Knowledge_Hub/knowledge_base.json*

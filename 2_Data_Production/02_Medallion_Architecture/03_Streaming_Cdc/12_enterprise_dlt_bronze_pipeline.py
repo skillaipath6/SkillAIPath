@@ -18,7 +18,7 @@ import dlt
 from pyspark.sql.functions import current_timestamp, expr
 
 # Load configuration
-%run ../../../1_Canvas/1_Setup/1_config
+%run ../../../1_Canvas/1_Setup/1_Config
 
 # COMMAND ----------
 

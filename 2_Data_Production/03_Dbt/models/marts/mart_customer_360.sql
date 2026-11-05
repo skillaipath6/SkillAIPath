@@ -13,14 +13,14 @@
 WITH customer_purchases AS (
   SELECT
     c.CustomerSK,
-    COUNT(DISTINCT fs.OrderID) AS TotalPurchases,
+    COUNT(DISTINCT fs.OrderID, fs.BatchDate) AS TotalPurchases, -- Phase P1: OrderID restarts daily — grain is (OrderID, BatchDate)
     SUM(fs.finalprice) AS TotalSpend,
     AVG(fs.finalprice) AS AvgOrderValue,
     MIN(d.Date) AS FirstPurchaseDate,
     MAX(d.Date) AS LastPurchaseDate,
     DATEDIFF(CURRENT_DATE(), MAX(d.Date)) AS DaysSinceLastPurchase
   FROM {{ ref('fact_sales') }} fs
-  INNER JOIN {{ ref('dim_customer') }} c ON fs.CustomerSK = c.CustomerSK
+  INNER JOIN {{ source('silver', 'dim_customer') }} c ON fs.CustomerSK = c.CustomerSK
   INNER JOIN {{ ref('dim_date') }} d ON fs.OrderDateID = d.DateID
   GROUP BY c.CustomerSK
 )
@@ -51,6 +51,6 @@ SELECT
     WHEN cp.DaysSinceLastPurchase <= 90 THEN 'At Risk'
     ELSE 'Churned'
   END AS ActivityStatus
-FROM {{ ref('dim_customer') }} c
+FROM {{ source('silver', 'dim_customer') }} c
 LEFT JOIN customer_purchases cp ON c.CustomerSK = cp.CustomerSK
 WHERE c.IsCurrent = 1

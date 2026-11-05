@@ -286,19 +286,24 @@
               "encodings": {
                 "columns": [
                   {
-                    "fieldName": "AgentName"
+                    "fieldName": "AgentName",
+                    "displayName": "Agent Name"
                   },
                   {
-                    "fieldName": "AgentCity"
+                    "fieldName": "AgentCity",
+                    "displayName": "Agent City"
                   },
                   {
-                    "fieldName": "total_revenue"
+                    "fieldName": "total_revenue",
+                    "displayName": "Total Revenue"
                   },
                   {
-                    "fieldName": "total_orders"
+                    "fieldName": "total_orders",
+                    "displayName": "Total Orders"
                   },
                   {
-                    "fieldName": "avg_order_value"
+                    "fieldName": "avg_order_value",
+                    "displayName": "Average Order Value"
                   }
                 ]
               },
@@ -560,21 +565,21 @@
               "encodings": {
                 "x": {
                   "fieldName": "WholeSalerName",
-                  "displayName": "WholeSalerName",
+                  "displayName": "Wholesaler Name",
                   "scale": {
                     "type": "categorical"
                   }
                 },
                 "y": {
                   "fieldName": "sum(total_quantity)",
-                  "displayName": "total_quantity",
+                  "displayName": "Total Quantity",
                   "scale": {
                     "type": "quantitative"
                   }
                 },
                 "color": {
                   "fieldName": "WholeSalerName",
-                  "displayName": "WholeSalerName",
+                  "displayName": "Wholesaler Name",
                   "scale": {
                     "type": "categorical"
                   }
@@ -685,7 +690,16 @@
   ],
   "uiSettings": {
     "theme": {
-      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+      "selectionColor": {
+        "light": "#6366F1",
+        "dark": "#6366F1"
+      },
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED",
+      "fontFamily": "Inter",
+      "widgetPadding": 16,
+      "widgetMargin": 12,
+      "widgetCornerRadius": 8,
+      "widgetShadow": 50
     },
     "applyModeEnabled": false
   }

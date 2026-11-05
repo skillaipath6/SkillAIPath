@@ -228,7 +228,7 @@ class SkillAIPathConfig:
     # DATABRICKS WORKSPACE CONFIGURATION
     # ========================================
     
-    DATABRICKS_HOST = os.getenv('DATABRICKS_HOST', 'https://dbc-df4ae156-0473.cloud.databricks.com')
+    DATABRICKS_HOST = os.getenv('DATABRICKS_HOST', 'https://your-workspace.cloud.databricks.com')
     DATABRICKS_TOKEN = os.getenv('DATABRICKS_TOKEN')  # From secrets or env
     SQL_WAREHOUSE_ID = os.getenv('SQL_WAREHOUSE_ID')
     CLUSTER_ID = os.getenv('CLUSTER_ID')
